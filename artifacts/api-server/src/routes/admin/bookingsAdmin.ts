@@ -3,7 +3,12 @@ import { db } from "@workspace/db";
 import { bookings, adminDrivers } from "@workspace/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
-import { sendDriverAssignment, sendStatusUpdate } from "../../lib/mailer";
+import {
+  sendDriverAssignment,
+  sendStatusUpdate,
+  sendCustomerConfirmation,
+  sendAdminNotification,
+} from "../../lib/mailer";
 
 const router = Router();
 
@@ -40,7 +45,6 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     const bookingId = Number(req.params.id);
     const { status, driverId, adminNotes, vehicleType } = req.body;
 
-    // Fetch current booking to detect what changed
     const [current] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     if (!current) { res.status(404).json({ error: "Not found" }); return; }
 
@@ -53,7 +57,6 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
     res.json(updated);
 
-    // Fire-and-forget emails after responding (doesn't block the response)
     const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
     const statusChanged = status !== undefined && status !== current.status;
 
@@ -77,10 +80,23 @@ router.post("/bookings", requireAdmin, async (req, res) => {
   try {
     const body = req.body;
     const confirmationCode = "LX" + Math.random().toString(36).toUpperCase().slice(2, 8);
-    const [booking] = await db.insert(bookings).values({ ...body, confirmationCode }).returning();
+    const [booking] = await db.insert(bookings).values({
+      ...body,
+      confirmationCode,
+      status: body.status ?? "pending",
+    }).returning();
     res.status(201).json(booking);
-    // Send emails in background
+
+    // Send emails in background: passenger, admin, and driver (if assigned)
+    sendCustomerConfirmation(booking).catch(() => {});
     sendAdminNotification(booking).catch(() => {});
+
+    if (booking.driverId) {
+      const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, booking.driverId));
+      if (driver?.email) {
+        sendDriverAssignment(booking, driver).catch(() => {});
+      }
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to create booking" });

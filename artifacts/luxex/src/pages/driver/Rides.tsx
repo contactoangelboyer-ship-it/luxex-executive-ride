@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Car, Search, MapPin, User, Phone, Mail, Navigation,
-  ChevronDown, ChevronUp, Package, Clock, DollarSign,
+  ChevronDown, ChevronUp, Package, Clock,
   CheckCircle, PlayCircle, FileText,
 } from "lucide-react";
 import { PortalLayout } from "@/components/PortalLayout";
@@ -173,7 +173,6 @@ export default function DriverRides() {
                               </p>
                             )}
                           </div>
-                          <p className="text-sm font-black text-white shrink-0">${r.totalAmount?.toFixed(0) ?? "—"}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
@@ -252,11 +251,10 @@ export default function DriverRides() {
                               )}
                             </div>
 
-                            {/* Info grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                            {/* Info grid — NO price */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
                               {[
                                 { icon: Clock, label: "Date & Time", value: `${r.date} · ${r.time}` },
-                                { icon: DollarSign, label: "Total", value: `$${r.totalAmount?.toFixed(2) ?? "0.00"}` },
                                 { icon: User, label: "Passengers", value: `${r.passengers ?? 1} pax · ${r.bags ?? 0} bags` },
                                 { icon: Car, label: "Vehicle", value: r.vehicleType ? r.vehicleType.replace("_", " ") : "Any" },
                               ].map(item => {

@@ -1,0 +1,15 @@
+{
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm --filter @workspace/luxex run build",
+  "outputDirectory": "artifacts/luxex/dist/public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://762ce647-d451-41fb-9ebf-7c0689ac8647-00-6df0b3z0fjtp.worf.replit.dev/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

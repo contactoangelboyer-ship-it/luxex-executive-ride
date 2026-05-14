@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Car, DollarSign, CheckCircle, Navigation, Phone, User,
+  Car, CheckCircle, Navigation, Phone, User,
   Calendar, Star, Power, ChevronRight, AlertCircle, MapPin,
-  Briefcase, Clock, RefreshCw,
+  Briefcase, RefreshCw,
 } from "lucide-react";
 import { PortalLayout } from "@/components/PortalLayout";
 import { getCurrentUser } from "@/hooks/useAuth";
@@ -59,16 +59,6 @@ export default function DriverDashboard() {
     .filter(r => ["confirmed", "assigned"].includes(r.status) && r.date >= today)
     .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
   const nextRide = upcoming[0] ?? active[0] ?? null;
-  const todayEarnings = todayRides.filter(r => r.status === "completed")
-    .reduce((acc, r) => acc + (r.totalAmount ?? 0), 0);
-  const totalEarnings = completed.reduce((acc, r) => acc + (r.totalAmount ?? 0), 0);
-  const weekRides = rides.filter(r => {
-    const d = new Date(r.date);
-    const now = new Date();
-    const diff = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-    return diff <= 7 && r.status === "completed";
-  });
-  const weekEarnings = weekRides.reduce((acc, r) => acc + (r.totalAmount ?? 0), 0);
 
   const navigateTo = (address: string) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, "_blank");
@@ -167,7 +157,6 @@ export default function DriverDashboard() {
                     )}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-2xl font-black text-white">${nextRide.totalAmount?.toFixed(0) ?? "—"}</p>
                     <p className="text-[10px] uppercase tracking-widest mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
                       {nextRide.date} · {nextRide.time}
                     </p>
@@ -231,13 +220,12 @@ export default function DriverDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Stats Grid — no earnings, rides count only */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
             { label: "Today's Rides", value: loading ? "—" : todayRides.length, icon: Car, color: "#fff" },
-            { label: "Today Earned", value: loading ? "—" : `$${todayEarnings.toFixed(0)}`, icon: DollarSign, color: YELLOW },
-            { label: "This Week", value: loading ? "—" : `$${weekEarnings.toFixed(0)}`, icon: Clock, color: "#60a5fa" },
-            { label: "All-Time", value: loading ? "—" : `$${totalEarnings.toFixed(0)}`, icon: Star, color: "#a78bfa" },
+            { label: "Completed", value: loading ? "—" : completed.length, icon: CheckCircle, color: "#34d399" },
+            { label: "Total Rides", value: loading ? "—" : rides.length, icon: Briefcase, color: YELLOW },
           ].map((s, i) => {
             const Icon = s.icon;
             return (
@@ -310,7 +298,6 @@ export default function DriverDashboard() {
                         )}
                       </div>
                       <div className="flex items-center gap-2.5 shrink-0">
-                        <span className="text-sm font-black text-white">${r.totalAmount?.toFixed(0) ?? "—"}</span>
                         <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5"
                           style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                           {STATUS_LABELS[r.status]}
@@ -329,11 +316,10 @@ export default function DriverDashboard() {
         </div>
 
         {/* Summary row */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Total Rides", value: rides.length, icon: Briefcase },
-            { label: "Completed", value: completed.length, icon: CheckCircle },
-            { label: "Completion", value: rides.length > 0 ? `${Math.round((completed.length / rides.length) * 100)}%` : "—", icon: Star },
+            { label: "Completion Rate", value: rides.length > 0 ? `${Math.round((completed.length / rides.length) * 100)}%` : "—", icon: Star },
           ].map((s, i) => {
             const Icon = s.icon;
             return (

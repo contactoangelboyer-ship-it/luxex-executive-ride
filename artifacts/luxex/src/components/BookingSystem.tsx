@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -144,48 +144,90 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   onSelect: (p: GeoPlace) => void; placeholder: string; onClear?: () => void;
 }) {
   const [query, setQuery] = useState(value?.short_name ?? "");
-  const [results, setResults] = useState<GeoPlace[]>([]);
+  const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const debQ = useDebounce(query, 380);
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const debQ = useDebounce(query, 350);
 
   useEffect(() => {
-    if (!focused) return;
-    if (debQ.length < 3) { setResults([]); return; }
+    if (!focused || debQ.length < 3) { setPredictions([]); return; }
+    const goog = (window as any).google;
+    if (!goog?.maps?.places) return;
     setLoading(true);
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(debQ)}&countrycodes=us&limit=6&addressdetails=1`, { headers: { "Referer": "https://luxexride.com" } })
-      .then(r => r.json())
-      .then((data: any[]) => setResults(data.map(d => ({ display_name: d.display_name, short_name: shortenPlace(d.display_name), lat: parseFloat(d.lat), lon: parseFloat(d.lon) }))))
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
+    const svc = new goog.maps.places.AutocompleteService();
+    svc.getPlacePredictions(
+      { input: debQ, componentRestrictions: { country: "us" } },
+      (preds: any[], status: string) => {
+        setLoading(false);
+        if (status === goog.maps.places.PlacesServiceStatus.OK && preds) {
+          setPredictions(preds);
+        } else {
+          setPredictions([]);
+        }
+      }
+    );
   }, [debQ, focused]);
+
+  const selectPrediction = (pred: any) => {
+    const goog = (window as any).google;
+    if (!goog?.maps?.places || !mapDivRef.current) return;
+    const placeSvc = new goog.maps.places.PlacesService(mapDivRef.current);
+    placeSvc.getDetails(
+      { placeId: pred.place_id, fields: ["geometry", "formatted_address"] },
+      (place: any, status: string) => {
+        if (status === goog.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lon = place.geometry.location.lng();
+          const short_name = pred.structured_formatting.main_text +
+            (pred.structured_formatting.secondary_text
+              ? ", " + pred.structured_formatting.secondary_text.split(",")[0]
+              : "");
+          onSelect({ display_name: place.formatted_address ?? pred.description, short_name, lat, lon });
+          setQuery(short_name);
+          setPredictions([]);
+          setFocused(false);
+        }
+      }
+    );
+  };
 
   useEffect(() => { if (value) setQuery(value.short_name); else setQuery(""); }, [value]);
 
   return (
     <div className="relative">
+      <div ref={mapDivRef} className="hidden" />
       <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{label}</label>
       <div className={`flex items-center gap-3 border px-4 py-3.5 transition-colors duration-200 ${focused ? "border-[#F2E147]" : "border-white/10"} bg-[#0f0f0f]`}>
         <span className="text-[#F2E147] shrink-0">{icon}</span>
-        <input className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none" placeholder={placeholder} value={query}
-          onChange={e => setQuery(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 200)} />
+        <input
+          className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none"
+          placeholder={placeholder}
+          value={query}
+          onChange={e => { setQuery(e.target.value); if (value && onClear) onClear(); }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+        />
         {loading && <Loader2 className="w-4 h-4 animate-spin text-white/20 shrink-0" />}
         {value && !loading && <Check className="w-4 h-4 text-[#F2E147] shrink-0" />}
         {value && onClear && !loading && (
-          <button onMouseDown={e => { e.preventDefault(); onClear(); setQuery(""); setResults([]); }} className="ml-1 text-white/20 hover:text-white/60 transition-colors">
+          <button onMouseDown={e => { e.preventDefault(); onClear(); setQuery(""); setPredictions([]); }} className="ml-1 text-white/20 hover:text-white/60 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
       <AnimatePresence>
-        {focused && results.length > 0 && (
+        {focused && predictions.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute left-0 right-0 top-full mt-1 z-50 bg-[#111] border border-white/10 overflow-hidden shadow-2xl">
-            {results.map((r, i) => (
-              <button key={i} onMouseDown={() => { onSelect(r); setQuery(r.short_name); setResults([]); setFocused(false); }}
+            {predictions.map((p: any) => (
+              <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
                 className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
                 <MapPin className="w-3.5 h-3.5 text-[#F2E147] shrink-0 mt-0.5" />
-                <span className="text-xs text-white/60 leading-snug">{r.short_name}</span>
+                <div>
+                  <span className="text-xs text-white/80 leading-snug block">{p.structured_formatting.main_text}</span>
+                  <span className="text-[10px] text-white/30 leading-snug">{p.structured_formatting.secondary_text}</span>
+                </div>
               </button>
             ))}
           </motion.div>

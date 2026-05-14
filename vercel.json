@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://e7a161e5-f126-4e6f-8e98-b91c502616d0-00-3ikzxb2jqslr.spock.replit.dev/api/:path*"
-    }
-  ]
-}

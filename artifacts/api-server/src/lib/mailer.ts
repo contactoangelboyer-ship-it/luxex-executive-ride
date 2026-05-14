@@ -77,6 +77,7 @@ function detailRow(label: string, value: string | number | null | undefined): st
   return `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>`;
 }
 
+// Full booking table — includes price breakdown (for passengers and admin)
 function bookingTable(b: any): string {
   return `<table class="details">
     ${detailRow("Confirmation #", `<strong style="color:#0a0a0a;font-family:'Courier New',monospace;letter-spacing:0.1em;">${b.confirmationCode}</strong>`)}
@@ -92,6 +93,24 @@ function bookingTable(b: any): string {
     ${b.childSeat ? detailRow("Child Seat", "Yes") : ""}
     ${b.notes ? detailRow("Notes", b.notes) : ""}
     ${detailRow("Total (excl. gratuity)", `<strong>$${Number(b.totalAmount ?? 0).toFixed(2)}</strong>`)}
+  </table>`;
+}
+
+// Driver-safe booking table — NO price information shown
+function bookingTableDriver(b: any): string {
+  return `<table class="details">
+    ${detailRow("Confirmation #", `<strong style="color:#0a0a0a;font-family:'Courier New',monospace;letter-spacing:0.1em;">${b.confirmationCode}</strong>`)}
+    ${detailRow("Service", titleCase(b.service ?? ""))}
+    ${detailRow("Date", b.date)}
+    ${detailRow("Time", fmtTime(b.time))}
+    ${detailRow("Pickup", b.pickupAddress)}
+    ${b.dropoffAddress ? detailRow("Drop-off", b.dropoffAddress) : ""}
+    ${detailRow("Vehicle", titleCase(b.vehicleType ?? ""))}
+    ${detailRow("Passengers", b.passengers)}
+    ${b.flightNumber ? detailRow("Flight #", b.flightNumber + (b.flightType ? ` (${titleCase(b.flightType)})` : "")) : ""}
+    ${b.meetAndGreet ? detailRow("Add-ons", "Meet & Greet") : ""}
+    ${b.childSeat ? detailRow("Child Seat", "Yes") : ""}
+    ${b.notes ? detailRow("Notes", b.notes) : ""}
   </table>`;
 }
 
@@ -190,11 +209,11 @@ export async function sendAdminNotification(booking: any): Promise<void> {
   }
 }
 
-// ── Driver Assignment Notification ───────────────────────────────────────────
+// ── Driver Assignment Notification (NO price info) ───────────────────────────
 
 export async function sendDriverAssignment(booking: any, driver: { name: string; email?: string | null }): Promise<void> {
   if (!resend) {
-    console.warn("[mailer] RESEND_API_KEY not configured — skipping driver email");
+    logger.warn("[mailer] RESEND_API_KEY not configured — skipping driver email");
     return;
   }
   if (!driver.email) return;
@@ -205,7 +224,7 @@ export async function sendDriverAssignment(booking: any, driver: { name: string;
       <p class="sub">Hello <strong>${driver.name}</strong>, you have been assigned to the following trip.</p>
 
       <div class="section-title">Trip Details</div>
-      ${bookingTable(booking)}
+      ${bookingTableDriver(booking)}
 
       <div class="section-title">Passenger Contact</div>
       <table class="details">
@@ -226,14 +245,15 @@ export async function sendDriverAssignment(booking: any, driver: { name: string;
   `);
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM,
       to: [driver.email],
       subject: `Trip Assigned — ${booking.date} at ${fmtTime(booking.time)} · ${booking.confirmationCode}`,
       html,
     });
+    logger.info({ id: result.data?.id, to: driver.email }, "[mailer] driver assignment sent");
   } catch (err) {
-    console.error("[mailer] Failed to send driver assignment email:", err);
+    logger.error({ err }, "[mailer] Failed to send driver assignment email");
   }
 }
 
@@ -261,7 +281,7 @@ export async function sendStatusUpdate(booking: any, newStatus: string): Promise
   };
 
   const info = statusMap[newStatus];
-  if (!info) return; // Only send for meaningful status changes
+  if (!info) return;
 
   const html = baseTemplate(`
     <div class="body">
@@ -290,6 +310,6 @@ export async function sendStatusUpdate(booking: any, newStatus: string): Promise
       html,
     });
   } catch (err) {
-    console.error("[mailer] Failed to send status update email:", err);
+    logger.error({ err }, "[mailer] Failed to send status update email");
   }
 }

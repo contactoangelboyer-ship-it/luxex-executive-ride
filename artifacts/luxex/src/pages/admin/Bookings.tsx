@@ -1,11 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
 const YELLOW = "#F2E147";
+
+function PlacesInput({ value, onChange, required, placeholder, className }: {
+  value: string; onChange: (val: string) => void;
+  required?: boolean; placeholder?: string; className?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const acRef = useRef<any>(null);
+
+  useEffect(() => {
+    const goog = (window as any).google;
+    if (!goog?.maps?.places || !inputRef.current) return;
+    acRef.current = new goog.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: "us" },
+      fields: ["formatted_address", "name"],
+    });
+    const listener = acRef.current.addListener("place_changed", () => {
+      const place = acRef.current.getPlace();
+      onChange(place.formatted_address ?? place.name ?? "");
+    });
+    return () => { goog.maps.event.removeListener(listener); };
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      required={required}
+      className={className}
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+    />
+  );
+}
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
@@ -31,6 +64,51 @@ const STATUS_LABELS: Record<string, string> = {
   in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
 };
 
+const VEHICLE_TYPES = ["sedan", "suv", "van", "sprinter", "limo"];
+const SERVICE_TYPES = ["airport", "corporate", "hourly", "event"];
+const FLIGHT_TYPES = ["arrival", "departure"];
+
+const EMPTY_FORM = {
+  service: "airport",
+  pickupAddress: "",
+  dropoffAddress: "",
+  date: "",
+  time: "",
+  passengers: 1,
+  bags: 1,
+  hours: "",
+  vehicleType: "sedan",
+  flightNumber: "",
+  flightType: "",
+  passengerName: "",
+  passengerPhone: "",
+  passengerEmail: "",
+  notes: "",
+  meetAndGreet: false,
+  childSeat: false,
+  baseAmount: "",
+  mileageAmount: "",
+  surchargesAmount: "",
+  tollsAmount: "",
+  totalAmount: "",
+  promoCode: "",
+  promoDiscount: "",
+  driverId: "",
+  status: "pending",
+};
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold tracking-widest uppercase text-white/25 mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls = "w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none transition-colors";
+const selectCls = inputCls + " cursor-pointer";
+
 export default function Bookings() {
   const rawSearch = useSearch();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -44,6 +122,12 @@ export default function Bookings() {
   const [driverAssign, setDriverAssign] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+
+  // New booking modal state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<typeof EMPTY_FORM>(EMPTY_FORM);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const load = () => {
     setLoading(true);
@@ -129,6 +213,63 @@ export default function Bookings() {
     } catch (e: any) { setSaveError(e?.message ?? "Error saving changes. Please try again."); } finally { setSaving(false); }
   };
 
+  const setField = (key: keyof typeof EMPTY_FORM, value: any) => {
+    setCreateForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const computedTotal = () => {
+    const base = parseFloat(String(createForm.baseAmount)) || 0;
+    const mileage = parseFloat(String(createForm.mileageAmount)) || 0;
+    const surcharges = parseFloat(String(createForm.surchargesAmount)) || 0;
+    const tolls = parseFloat(String(createForm.tollsAmount)) || 0;
+    const discount = parseFloat(String(createForm.promoDiscount)) || 0;
+    return Math.max(0, base + mileage + surcharges + tolls - discount);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError("");
+    try {
+      const payload: Record<string, any> = {
+        service: createForm.service,
+        pickupAddress: createForm.pickupAddress,
+        dropoffAddress: createForm.dropoffAddress || null,
+        date: createForm.date,
+        time: createForm.time,
+        passengers: Number(createForm.passengers),
+        bags: Number(createForm.bags),
+        hours: createForm.hours ? Number(createForm.hours) : null,
+        vehicleType: createForm.vehicleType || null,
+        flightNumber: createForm.flightNumber || null,
+        flightType: createForm.flightType || null,
+        passengerName: createForm.passengerName,
+        passengerPhone: createForm.passengerPhone,
+        passengerEmail: createForm.passengerEmail,
+        notes: createForm.notes || null,
+        meetAndGreet: createForm.meetAndGreet,
+        childSeat: createForm.childSeat,
+        baseAmount: parseFloat(String(createForm.baseAmount)) || 0,
+        mileageAmount: parseFloat(String(createForm.mileageAmount)) || 0,
+        surchargesAmount: parseFloat(String(createForm.surchargesAmount)) || 0,
+        tollsAmount: parseFloat(String(createForm.tollsAmount)) || 0,
+        totalAmount: createForm.totalAmount !== "" ? parseFloat(String(createForm.totalAmount)) : computedTotal(),
+        promoCode: createForm.promoCode || null,
+        promoDiscount: parseFloat(String(createForm.promoDiscount)) || 0,
+        status: createForm.status,
+        driverId: createForm.driverId !== "" ? Number(createForm.driverId) : null,
+      };
+      const created = await adminApi.bookings.create(payload);
+      setBookings(prev => [created, ...prev]);
+      setShowCreate(false);
+      setCreateForm(EMPTY_FORM);
+    } catch (e: any) {
+      setCreateError(e?.message ?? "Failed to create booking. Please try again.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -137,10 +278,17 @@ export default function Bookings() {
             <h2 className="font-black text-xl uppercase tracking-tight text-white">Bookings</h2>
             <p className="text-white/25 text-xs">{filtered.length} results</p>
           </div>
-          <button onClick={exportCSV}
-            className="flex items-center gap-2 px-3 py-2 border border-white/[0.07] text-white/30 hover:text-white hover:border-white/30 transition-colors text-[10px] font-bold tracking-widest uppercase">
-            <Download className="w-3.5 h-3.5" /> Export CSV
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => { setShowCreate(true); setCreateError(""); setCreateForm(EMPTY_FORM); }}
+              className="flex items-center gap-2 px-3 py-2 text-[10px] font-bold tracking-widest uppercase text-black"
+              style={{ background: YELLOW }}>
+              <Plus className="w-3.5 h-3.5" /> New Booking
+            </button>
+            <button onClick={exportCSV}
+              className="flex items-center gap-2 px-3 py-2 border border-white/[0.07] text-white/30 hover:text-white hover:border-white/30 transition-colors text-[10px] font-bold tracking-widest uppercase">
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
@@ -229,6 +377,226 @@ export default function Bookings() {
         </div>
       </div>
 
+      {/* ── Create Booking Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showCreate && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-50 flex items-start justify-center p-4 overflow-y-auto"
+            onClick={e => { if (e.target === e.currentTarget) setShowCreate(false); }}>
+            <motion.div initial={{ opacity: 0, scale: 0.97, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+              className="w-full max-w-2xl bg-[#0a0a0a] border border-white/[0.07] my-6">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-widest text-white">New Booking</h3>
+                  <p className="text-white/30 text-xs mt-0.5">Create a reservation on behalf of a passenger</p>
+                </div>
+                <button onClick={() => setShowCreate(false)} className="text-white/30 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreate} className="p-5 space-y-5">
+                {/* Passenger Info */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Passenger Information</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Field label="Full Name *">
+                      <input required className={inputCls} placeholder="John Smith"
+                        value={createForm.passengerName} onChange={e => setField("passengerName", e.target.value)} />
+                    </Field>
+                    <Field label="Phone *">
+                      <input required className={inputCls} placeholder="+1 (555) 000-0000"
+                        value={createForm.passengerPhone} onChange={e => setField("passengerPhone", e.target.value)} />
+                    </Field>
+                    <Field label="Email *">
+                      <input required type="email" className={inputCls} placeholder="passenger@email.com"
+                        value={createForm.passengerEmail} onChange={e => setField("passengerEmail", e.target.value)} />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Trip Details */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Trip Details</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                    <Field label="Service *">
+                      <select required className={selectCls} style={{ colorScheme: "dark" }}
+                        value={createForm.service} onChange={e => setField("service", e.target.value)}>
+                        {SERVICE_TYPES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Date *">
+                      <input required type="date" className={inputCls} style={{ colorScheme: "dark" }}
+                        value={createForm.date} onChange={e => setField("date", e.target.value)} />
+                    </Field>
+                    <Field label="Time *">
+                      <input required type="time" className={inputCls} style={{ colorScheme: "dark" }}
+                        value={createForm.time} onChange={e => setField("time", e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <Field label="Pickup Address *">
+                      <PlacesInput required className={inputCls} placeholder="123 Main St, Newark NJ"
+                        value={createForm.pickupAddress} onChange={v => setField("pickupAddress", v)} />
+                    </Field>
+                    <Field label="Drop-off Address">
+                      <PlacesInput className={inputCls} placeholder="EWR Airport — Terminal A"
+                        value={createForm.dropoffAddress} onChange={v => setField("dropoffAddress", v)} />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Field label="Vehicle">
+                      <select className={selectCls} style={{ colorScheme: "dark" }}
+                        value={createForm.vehicleType} onChange={e => setField("vehicleType", e.target.value)}>
+                        {VEHICLE_TYPES.map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Passengers">
+                      <input type="number" min={1} max={20} className={inputCls}
+                        value={createForm.passengers} onChange={e => setField("passengers", e.target.value)} />
+                    </Field>
+                    <Field label="Bags">
+                      <input type="number" min={0} max={20} className={inputCls}
+                        value={createForm.bags} onChange={e => setField("bags", e.target.value)} />
+                    </Field>
+                    <Field label="Hours (if hourly)">
+                      <input type="number" min={1} className={inputCls} placeholder="—"
+                        value={createForm.hours} onChange={e => setField("hours", e.target.value)} />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Flight Info */}
+                {createForm.service === "airport" && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Flight Information</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Flight Number">
+                        <input className={inputCls} placeholder="AA 1234"
+                          value={createForm.flightNumber} onChange={e => setField("flightNumber", e.target.value)} />
+                      </Field>
+                      <Field label="Flight Type">
+                        <select className={selectCls} style={{ colorScheme: "dark" }}
+                          value={createForm.flightType} onChange={e => setField("flightType", e.target.value)}>
+                          <option value="">—</option>
+                          {FLIGHT_TYPES.map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Pricing</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    <Field label="Base ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={createForm.baseAmount} onChange={e => setField("baseAmount", e.target.value)} />
+                    </Field>
+                    <Field label="Mileage ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={createForm.mileageAmount} onChange={e => setField("mileageAmount", e.target.value)} />
+                    </Field>
+                    <Field label="Surcharges ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={createForm.surchargesAmount} onChange={e => setField("surchargesAmount", e.target.value)} />
+                    </Field>
+                    <Field label="Tolls ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={createForm.tollsAmount} onChange={e => setField("tollsAmount", e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Field label="Promo Code">
+                      <input className={inputCls} placeholder="LUXVIP"
+                        value={createForm.promoCode} onChange={e => setField("promoCode", e.target.value)} />
+                    </Field>
+                    <Field label="Promo Discount ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={createForm.promoDiscount} onChange={e => setField("promoDiscount", e.target.value)} />
+                    </Field>
+                    <Field label="Total Override ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls}
+                        placeholder={`Auto: $${computedTotal().toFixed(2)}`}
+                        value={createForm.totalAmount} onChange={e => setField("totalAmount", e.target.value)} />
+                    </Field>
+                  </div>
+                  <p className="text-[10px] text-white/20 mt-1.5">
+                    Calculated total: <span className="text-[#F2E147] font-bold">${computedTotal().toFixed(2)}</span>
+                    {" "}(leave Total Override blank to use this)
+                  </p>
+                </div>
+
+                {/* Assignment */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Assignment & Status</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Assign Driver">
+                      <select className={selectCls} style={{ colorScheme: "dark" }}
+                        value={createForm.driverId} onChange={e => setField("driverId", e.target.value)}>
+                        <option value="">No driver assigned</option>
+                        {drivers.map(d => (
+                          <option key={d.id} value={String(d.id)}>
+                            {d.name}{d.status === "off_duty" ? " (Off Duty)" : d.status === "on_trip" ? " (On Trip)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Initial Status">
+                      <select className={selectCls} style={{ colorScheme: "dark" }}
+                        value={createForm.status} onChange={e => setField("status", e.target.value)}>
+                        {["pending", "confirmed", "assigned"].map(s => (
+                          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Add-ons & Notes */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Add-ons & Notes</p>
+                  <div className="flex gap-5 mb-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="accent-[#F2E147]"
+                        checked={createForm.meetAndGreet} onChange={e => setField("meetAndGreet", e.target.checked)} />
+                      <span className="text-xs text-white/60">Meet & Greet</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="accent-[#F2E147]"
+                        checked={createForm.childSeat} onChange={e => setField("childSeat", e.target.checked)} />
+                      <span className="text-xs text-white/60">Child Seat</span>
+                    </label>
+                  </div>
+                  <Field label="Notes / Special Instructions">
+                    <textarea rows={2} className={inputCls + " resize-none"} placeholder="Any special instructions…"
+                      value={createForm.notes} onChange={e => setField("notes", e.target.value)} />
+                  </Field>
+                </div>
+
+                {createError && (
+                  <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2">{createError}</p>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button type="button" onClick={() => setShowCreate(false)}
+                    className="flex-1 py-3 text-[11px] font-black tracking-widest uppercase border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={creating}
+                    className="flex-1 py-3 text-[11px] font-black tracking-widest uppercase text-black flex items-center justify-center gap-2 disabled:opacity-60"
+                    style={{ background: YELLOW }}>
+                    {creating ? <><Loader2 className="w-4 h-4 animate-spin" />Creating…</> : "Create Booking"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Detail / Edit Modal ──────────────────────────────────────────── */}
       <AnimatePresence>
         {selected && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, pricingConfig, adminDrivers, vehicles, zones, promotions } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { sendCustomerConfirmation, sendAdminNotification } from "../lib/mailer";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -181,8 +182,8 @@ router.post("/bookings", async (req, res) => {
     res.status(201).json({ booking, confirmationCode });
 
     // Fire-and-forget emails
-    sendCustomerConfirmation(booking).catch(() => {});
-    sendAdminNotification(booking).catch(() => {});
+    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed"));
+    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed"));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to create booking" });

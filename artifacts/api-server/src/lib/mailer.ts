@@ -1,6 +1,8 @@
 import { Resend } from "resend";
+import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+logger.info({ hasKey: !!process.env.RESEND_API_KEY }, "[mailer] Resend initialized");
 const FROM = "LuxEx Executive Ride <noreply@luxexride.com>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
@@ -97,7 +99,7 @@ function bookingTable(b: any): string {
 
 export async function sendCustomerConfirmation(booking: any): Promise<void> {
   if (!resend) {
-    console.warn("[mailer] RESEND_API_KEY not configured — skipping customer email");
+    logger.warn("[mailer] RESEND_API_KEY not configured — skipping customer email");
     return;
   }
   if (!booking.passengerEmail) return;
@@ -126,14 +128,16 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
   `);
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM,
       to: [booking.passengerEmail],
       subject: `Booking Confirmed — ${booking.confirmationCode} · LuxEx Executive Ride`,
       html,
     });
+    logger.info({ id: result.data?.id, to: booking.passengerEmail }, "[mailer] customer confirmation sent");
   } catch (err) {
-    console.error("[mailer] Failed to send customer confirmation:", err);
+    logger.error({ err }, "[mailer] Failed to send customer confirmation");
+    throw err;
   }
 }
 
@@ -141,11 +145,11 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 
 export async function sendAdminNotification(booking: any): Promise<void> {
   if (!resend) {
-    console.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
+    logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
     return;
   }
   if (!ADMIN_EMAIL) {
-    console.warn("[mailer] ADMIN_EMAIL not configured — skipping admin notification");
+    logger.warn("[mailer] ADMIN_EMAIL not configured — skipping admin notification");
     return;
   }
 
@@ -173,14 +177,16 @@ export async function sendAdminNotification(booking: any): Promise<void> {
   `);
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM,
       to: [ADMIN_EMAIL],
       subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
       html,
     });
+    logger.info({ id: result.data?.id, to: ADMIN_EMAIL }, "[mailer] admin notification sent");
   } catch (err) {
-    console.error("[mailer] Failed to send admin notification:", err);
+    logger.error({ err }, "[mailer] Failed to send admin notification");
+    throw err;
   }
 }
 

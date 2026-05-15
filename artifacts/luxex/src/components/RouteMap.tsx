@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import "leaflet/dist/leaflet.css";
 
 interface LatLng { lat: number; lon: number }
 
@@ -10,62 +9,85 @@ interface RouteMapProps {
   className?: string;
 }
 
-interface RouteInfo {
+export interface RouteInfo {
   distanceMiles: number;
   durationMin: number;
   polyline: [number, number][];
 }
 
-let L: any = null;
+const DARK_MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#0a0a0a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0a0a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#666666" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#0e0e0e" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#444444" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#111111" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#444444" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#222222" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#111111" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#111111" }] },
+  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#050505" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#333333" }] },
+  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#050505" }] },
+];
 
-async function fetchRoute(points: LatLng[]): Promise<RouteInfo | null> {
+function waitForGoogleMaps(): Promise<void> {
+  return new Promise((resolve) => {
+    if ((window as any).google?.maps) { resolve(); return; }
+    const interval = setInterval(() => {
+      if ((window as any).google?.maps) { clearInterval(interval); resolve(); }
+    }, 100);
+  });
+}
+
+export async function fetchRoute(points: LatLng[]): Promise<RouteInfo | null> {
   if (points.length < 2) return null;
   try {
-    const coords = points.map(p => `${p.lon},${p.lat}`).join(";");
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const route = data.routes?.[0];
-    if (!route) return null;
-    const distanceMiles = (route.distance / 1609.344) * 1.05;
-    const durationMin = Math.round(route.duration / 60);
-    const polyline: [number, number][] = route.geometry.coordinates.map((c: number[]) => [c[1], c[0]]);
-    return { distanceMiles, durationMin, polyline };
+    await waitForGoogleMaps();
+    const goog = (window as any).google;
+    if (!goog?.maps) return null;
+
+    return new Promise((resolve) => {
+      const service = new goog.maps.DirectionsService();
+      const origin = { lat: points[0].lat, lng: points[0].lon };
+      const destination = { lat: points[points.length - 1].lat, lng: points[points.length - 1].lon };
+      const waypoints = points.slice(1, -1).map((p: LatLng) => ({
+        location: { lat: p.lat, lng: p.lon },
+        stopover: true,
+      }));
+
+      service.route(
+        { origin, destination, waypoints, travelMode: goog.maps.TravelMode.DRIVING },
+        (result: any, status: string) => {
+          if (status !== "OK" || !result?.routes?.[0]) { resolve(null); return; }
+          const route = result.routes[0];
+          let distanceMeters = 0;
+          let durationSeconds = 0;
+          route.legs.forEach((leg: any) => {
+            distanceMeters += leg.distance.value;
+            durationSeconds += leg.duration.value;
+          });
+          const distanceMiles = (distanceMeters / 1609.344) * 1.05;
+          const durationMin = Math.round(durationSeconds / 60);
+          resolve({ distanceMiles, durationMin, polyline: [] });
+        }
+      );
+    });
   } catch {
     return null;
   }
 }
 
-function pickupIcon() {
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:14px;height:14px;background:#F2E147;border:3px solid #000;border-radius:50%;box-shadow:0 0 0 2px #F2E147"></div>`,
-    iconAnchor: [7, 7],
-  });
-}
-
-function dropoffIcon() {
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:14px;height:14px;background:#fff;border:3px solid #000;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,0.5)"></div>`,
-    iconAnchor: [7, 7],
-  });
-}
-
-function stopIcon(index: number) {
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:12px;height:12px;background:#a78bfa;border:2px solid #000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:900;color:#000;line-height:1">${index + 1}</div>`,
-    iconAnchor: [6, 6],
-  });
-}
-
 export function RouteMap({ pickup, dropoff, stops = [], className = "" }: RouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const markers = useRef<any[]>([]);
-  const polylineRef = useRef<any>(null);
+  const directionsRenderer = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -74,20 +96,29 @@ export function RouteMap({ pickup, dropoff, stops = [], className = "" }: RouteM
     let mounted = true;
 
     const init = async () => {
-      if (!L) L = (await import("leaflet")).default;
-      if (!mounted || !mapRef.current) return;
-      if (mapInstance.current) return;
+      await waitForGoogleMaps();
+      if (!mounted || !mapRef.current || mapInstance.current) return;
+      const goog = (window as any).google;
 
-      mapInstance.current = L.map(mapRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView([40.7128, -74.006], 11);
+      mapInstance.current = new goog.maps.Map(mapRef.current, {
+        center: { lat: 40.7128, lng: -74.006 },
+        zoom: 11,
+        styles: DARK_MAP_STYLE,
+        disableDefaultUI: true,
+        zoomControl: true,
+        zoomControlOptions: { position: goog.maps.ControlPosition.RIGHT_BOTTOM },
+        gestureHandling: "cooperative",
+      });
 
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 19,
-      }).addTo(mapInstance.current);
-
-      L.control.zoom({ position: "bottomright" }).addTo(mapInstance.current);
+      directionsRenderer.current = new goog.maps.DirectionsRenderer({
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#F2E147",
+          strokeWeight: 4,
+          strokeOpacity: 0.9,
+        },
+      });
+      directionsRenderer.current.setMap(mapInstance.current);
     };
 
     init();
@@ -95,11 +126,11 @@ export function RouteMap({ pickup, dropoff, stops = [], className = "" }: RouteM
   }, []);
 
   useEffect(() => {
-    if (!mapInstance.current || !L) return;
+    const goog = (window as any).google;
+    if (!mapInstance.current || !goog?.maps) return;
 
-    markers.current.forEach(m => m.remove());
-    markers.current = [];
-    if (polylineRef.current) { polylineRef.current.remove(); polylineRef.current = null; }
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
     setRouteInfo(null);
 
     const allPoints: LatLng[] = [];
@@ -108,43 +139,102 @@ export function RouteMap({ pickup, dropoff, stops = [], className = "" }: RouteM
     if (dropoff) allPoints.push(dropoff);
 
     if (pickup) {
-      const m = L.marker([pickup.lat, pickup.lon], { icon: pickupIcon() }).addTo(mapInstance.current);
-      m.bindTooltip("Pickup", { className: "leaflet-dark-tip", direction: "top" });
-      markers.current.push(m);
+      const marker = new goog.maps.Marker({
+        position: { lat: pickup.lat, lng: pickup.lon },
+        map: mapInstance.current,
+        icon: {
+          path: goog.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: "#F2E147",
+          fillOpacity: 1,
+          strokeColor: "#000000",
+          strokeWeight: 3,
+        },
+        title: "Pickup",
+        zIndex: 10,
+      });
+      markersRef.current.push(marker);
     }
 
     stops.forEach((s, i) => {
-      const m = L.marker([s.lat, s.lon], { icon: stopIcon(i) }).addTo(mapInstance.current);
-      m.bindTooltip(`Stop ${i + 1}`, { direction: "top" });
-      markers.current.push(m);
+      const marker = new goog.maps.Marker({
+        position: { lat: s.lat, lng: s.lon },
+        map: mapInstance.current,
+        icon: {
+          path: goog.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#a78bfa",
+          fillOpacity: 1,
+          strokeColor: "#000000",
+          strokeWeight: 2,
+        },
+        label: { text: String(i + 1), color: "#000000", fontSize: "8px", fontWeight: "900" },
+        title: `Stop ${i + 1}`,
+        zIndex: 9,
+      });
+      markersRef.current.push(marker);
     });
 
     if (dropoff) {
-      const m = L.marker([dropoff.lat, dropoff.lon], { icon: dropoffIcon() }).addTo(mapInstance.current);
-      m.bindTooltip("Drop-off", { direction: "top" });
-      markers.current.push(m);
+      const marker = new goog.maps.Marker({
+        position: { lat: dropoff.lat, lng: dropoff.lon },
+        map: mapInstance.current,
+        icon: {
+          path: goog.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: "#ffffff",
+          fillOpacity: 1,
+          strokeColor: "#000000",
+          strokeWeight: 3,
+        },
+        title: "Drop-off",
+        zIndex: 10,
+      });
+      markersRef.current.push(marker);
     }
 
     if (allPoints.length >= 2) {
       setLoading(true);
-      fetchRoute(allPoints).then(info => {
-        if (!mapInstance.current) return;
-        if (info && info.polyline.length > 0) {
-          polylineRef.current = L.polyline(info.polyline, {
-            color: "#F2E147",
-            weight: 4,
-            opacity: 0.9,
-          }).addTo(mapInstance.current);
-          setRouteInfo(info);
-          const bounds = L.latLngBounds(allPoints.map(p => [p.lat, p.lon]));
-          mapInstance.current.fitBounds(bounds, { padding: [40, 40] });
-        } else {
-          const bounds = L.latLngBounds(allPoints.map(p => [p.lat, p.lon]));
-          mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+      const service = new goog.maps.DirectionsService();
+      const origin = { lat: allPoints[0].lat, lng: allPoints[0].lon };
+      const destination = { lat: allPoints[allPoints.length - 1].lat, lng: allPoints[allPoints.length - 1].lon };
+      const waypoints = allPoints.slice(1, -1).map((p: LatLng) => ({
+        location: { lat: p.lat, lng: p.lon },
+        stopover: true,
+      }));
+
+      service.route(
+        { origin, destination, waypoints, travelMode: goog.maps.TravelMode.DRIVING },
+        (result: any, status: string) => {
+          setLoading(false);
+          if (status === "OK" && directionsRenderer.current && result?.routes?.[0]) {
+            directionsRenderer.current.setDirections(result);
+            const route = result.routes[0];
+            let distanceMeters = 0;
+            let durationSeconds = 0;
+            route.legs.forEach((leg: any) => {
+              distanceMeters += leg.distance.value;
+              durationSeconds += leg.duration.value;
+            });
+            setRouteInfo({
+              distanceMiles: (distanceMeters / 1609.344) * 1.05,
+              durationMin: Math.round(durationSeconds / 60),
+              polyline: [],
+            });
+          } else {
+            if (directionsRenderer.current) directionsRenderer.current.setDirections({ routes: [] });
+            const bounds = new goog.maps.LatLngBounds();
+            allPoints.forEach(p => bounds.extend({ lat: p.lat, lng: p.lon }));
+            mapInstance.current.fitBounds(bounds, 50);
+          }
         }
-      }).finally(() => setLoading(false));
-    } else if (allPoints.length === 1) {
-      mapInstance.current.setView([allPoints[0].lat, allPoints[0].lon], 13);
+      );
+    } else {
+      if (directionsRenderer.current) directionsRenderer.current.setDirections({ routes: [] });
+      if (allPoints.length === 1) {
+        mapInstance.current.setCenter({ lat: allPoints[0].lat, lng: allPoints[0].lon });
+        mapInstance.current.setZoom(14);
+      }
     }
   }, [pickup, dropoff, stops]);
 
@@ -181,33 +271,6 @@ export function RouteMap({ pickup, dropoff, stops = [], className = "" }: RouteM
           )}
         </div>
       )}
-
-      <style>{`
-        .leaflet-dark-tip {
-          background: #111 !important;
-          border: 1px solid rgba(255,255,255,0.1) !important;
-          color: rgba(255,255,255,0.6) !important;
-          font-size: 10px;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          border-radius: 0 !important;
-          padding: 4px 8px !important;
-        }
-        .leaflet-tooltip-top.leaflet-dark-tip::before { border-top-color: rgba(255,255,255,0.1) !important; }
-        .leaflet-control-attribution { display: none !important; }
-        .leaflet-control-zoom a {
-          background: #111 !important;
-          color: rgba(255,255,255,0.4) !important;
-          border-color: rgba(255,255,255,0.1) !important;
-          border-radius: 0 !important;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .leaflet-control-zoom a:hover { background: #222 !important; color: #fff !important; }
-      `}</style>
     </div>
   );
 }
-
-export { type RouteInfo, fetchRoute };

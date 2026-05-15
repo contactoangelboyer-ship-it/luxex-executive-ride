@@ -3,6 +3,12 @@ import crypto from "crypto";
 import { db, bookings, adminDrivers, vehicles, pricingConfig, zones, promotions, adminUsers } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin, signToken } from "../../middlewares/adminAuth";
+import {
+  sendCustomerConfirmation,
+  sendAdminNotification,
+  sendDriverAssignment,
+  sendStatusUpdate,
+} from "../../lib/mailer";
 
 const router = Router();
 
@@ -88,7 +94,7 @@ router.get("/dashboard", async (_req, res) => {
       },
       recentBookings: allBookings.slice(0, 10),
     });
-  } catch (err: any) {
+  } catch {
     res.json({ dbConfigured: false, stats: {}, recentBookings: [] });
   }
 });
@@ -140,6 +146,20 @@ router.patch("/bookings/:id", async (req, res) => {
 
     const [updated] = await db.update(bookings).set(updates as any).where(eq(bookings.id, id)).returning();
     res.json(updated);
+
+    const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
+    const statusChanged = status !== undefined && status !== current.status;
+
+    if (driverChanged) {
+      const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, Number(driverId)));
+      if (driver?.email) {
+        sendDriverAssignment(updated, driver).catch(() => {});
+      }
+    }
+
+    if (statusChanged) {
+      sendStatusUpdate(updated, status).catch(() => {});
+    }
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to update booking" });
   }
@@ -149,8 +169,18 @@ router.post("/bookings", async (req, res) => {
   try {
     const body = req.body;
     const code = "LX-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-    const [booking] = await db.insert(bookings).values({ ...body, confirmationCode: code, status: "pending" }).returning();
+    const [booking] = await db.insert(bookings).values({ ...body, confirmationCode: code, status: body.status ?? "pending" }).returning();
     res.status(201).json(booking);
+
+    sendCustomerConfirmation(booking).catch(() => {});
+    sendAdminNotification(booking).catch(() => {});
+
+    if (booking.driverId) {
+      const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, booking.driverId));
+      if (driver?.email) {
+        sendDriverAssignment(booking, driver).catch(() => {});
+      }
+    }
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to create booking" });
   }

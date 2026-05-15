@@ -126,7 +126,7 @@ async function buildAll() {
     format: "esm",
     outfile: path.resolve(funcDir, "index.mjs"),
     logLevel: "info",
-    external: [...EXTERNALS, "pino-pretty", "thread-stream"],
+    external: [...EXTERNALS, "pino-pretty", "thread-stream", "node-cron"],
     sourcemap: false,
     banner: BANNER,
   });
@@ -143,6 +143,7 @@ async function buildAll() {
   );
 
   // Vercel Build Output config — routes all traffic to the function
+  // Includes cron job to fire /api/cron/reminders every 30 minutes
   await writeFile(
     path.resolve(artifactDir, ".vercel/output/config.json"),
     JSON.stringify({
@@ -150,10 +151,16 @@ async function buildAll() {
       routes: [
         { src: "/(.*)", dest: "/api" },
       ],
+      crons: [
+        {
+          path: "/api/cron/reminders",
+          schedule: "*/30 * * * *",
+        },
+      ],
     }, null, 2),
   );
 
-  console.log("✅ Build complete: dist/index.mjs (Replit) + .vercel/output/ (Vercel serverless)");
+  console.log("✅ Build complete: dist/index.mjs (Replit) + .vercel/output/ (Vercel serverless) + cron job configured");
 }
 
 buildAll().catch((err) => {

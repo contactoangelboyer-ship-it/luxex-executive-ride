@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://3de95ea0-d7f6-4583-8896-8b3400332081-00-2dzaqtcngiz9v.picard.replit.dev/api/:path*"
+      "destination": "https://289f63b2-09f8-4b89-86c5-343900597033-00-1lbuv575k9ecy.spock.replit.dev/api/:path*"
     },
     {
       "source": "/((?!api/).*)",

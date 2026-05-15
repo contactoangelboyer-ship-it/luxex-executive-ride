@@ -2,13 +2,13 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, pricingConfig, adminDrivers, vehicles, zones, promotions } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { sendCustomerConfirmation, sendAdminNotification } from "../lib/mailer";
+import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate } from "../lib/mailer";
 import { logger } from "../lib/logger";
 
 const router = Router();
 
 function generateCode(): string {
-  return "LX" + Math.random().toString(36).toUpperCase().slice(2, 8);
+  return "LX-" + Math.random().toString(36).toUpperCase().slice(2, 8);
 }
 
 router.get("/pricing", async (_req, res) => {
@@ -24,8 +24,9 @@ router.get("/pricing", async (_req, res) => {
 router.get("/vehicles", async (_req, res) => {
   try {
     if (!db) { res.json([]); return; }
-    const rows = await db.select().from(vehicles).where(eq(vehicles.status, "active"));
-    res.json(rows);
+    const rows = await db.select({ type: vehicles.type }).from(vehicles).where(eq(vehicles.status, "active"));
+    const activeTypes = [...new Set(rows.map((r) => r.type))];
+    res.json(activeTypes);
   } catch {
     res.json([]);
   }
@@ -58,13 +59,51 @@ router.get("/promotions/validate", async (req, res) => {
   }
 });
 
+router.get("/bookings/track", async (req, res) => {
+  try {
+    if (!db) { res.status(503).json({ error: "DB not configured" }); return; }
+    const code = String(req.query.code ?? "").toUpperCase().trim();
+    if (!code) { res.status(400).json({ error: "Confirmation code required" }); return; }
+
+    const [booking] = await db.select().from(bookings).where(eq(bookings.confirmationCode, code));
+    if (!booking) { res.status(404).json({ error: "Booking not found. Please check your confirmation code." }); return; }
+
+    let driverName: string | null = null;
+    let driverPhone: string | null = null;
+    if (booking.driverId) {
+      const [driver] = await db
+        .select({ name: adminDrivers.name, phone: adminDrivers.phone })
+        .from(adminDrivers)
+        .where(eq(adminDrivers.id, booking.driverId));
+      if (driver) { driverName = driver.name; driverPhone = driver.phone; }
+    }
+
+    res.json({
+      confirmationCode: booking.confirmationCode,
+      status: booking.status,
+      service: booking.service,
+      date: booking.date,
+      time: booking.time,
+      pickupAddress: booking.pickupAddress,
+      dropoffAddress: booking.dropoffAddress,
+      vehicleType: booking.vehicleType,
+      passengers: booking.passengers,
+      flightNumber: booking.flightNumber ?? null,
+      driverName,
+      driverPhone,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to track booking" });
+  }
+});
+
 router.get("/bookings/passenger", async (req, res) => {
   try {
     if (!db) { res.json([]); return; }
     const email = req.query.email as string;
     if (!email) { res.status(400).json({ error: "email required" }); return; }
-    const result = await db.select().from(bookings)
-      .where(eq(bookings.passengerEmail, email));
+    const result = await db.select().from(bookings).where(eq(bookings.passengerEmail, email));
     res.json(result);
   } catch (err) {
     req.log.error(err);
@@ -114,6 +153,8 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const [updated] = await db.update(bookings).set({ status: "cancelled" })
       .where(eq(bookings.id, id)).returning();
     res.json(updated);
+
+    sendStatusUpdate(updated, "cancelled").catch((err) => logger.error({ err }, "[mailer] cancellation email failed"));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to cancel booking" });
@@ -140,6 +181,8 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
     }
     const [updated] = await db.update(bookings).set({ status }).where(eq(bookings.id, id)).returning();
     res.json(updated);
+
+    sendStatusUpdate(updated, status).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update status" });
@@ -181,7 +224,6 @@ router.post("/bookings", async (req, res) => {
 
     res.status(201).json({ booking, confirmationCode });
 
-    // Fire-and-forget emails
     sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed"));
     sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed"));
   } catch (err) {

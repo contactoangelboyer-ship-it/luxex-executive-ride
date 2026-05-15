@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, pricingConfig, adminDrivers, vehicles, zones, promotions } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate } from "../lib/mailer";
+import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate, sendPostTripSummary } from "../lib/mailer";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -182,7 +182,11 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
     const [updated] = await db.update(bookings).set({ status }).where(eq(bookings.id, id)).returning();
     res.json(updated);
 
-    sendStatusUpdate(updated, status).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
+    if (status === "completed") {
+      sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"));
+    } else {
+      sendStatusUpdate(updated, status).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update status" });

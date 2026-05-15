@@ -37,6 +37,8 @@ export const bookings = pgTable("bookings", {
   promoCode: varchar("promo_code", { length: 50 }),
   promoDiscount: doublePrecision("promo_discount").default(0),
   adminNotes: text("admin_notes"),
+  reminder24hSentAt: timestamp("reminder_24h_sent_at"),
+  reminder2hSentAt: timestamp("reminder_2h_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

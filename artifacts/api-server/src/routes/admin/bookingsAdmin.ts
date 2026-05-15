@@ -8,6 +8,7 @@ import {
   sendStatusUpdate,
   sendCustomerConfirmation,
   sendAdminNotification,
+  sendPostTripSummary,
 } from "../../lib/mailer";
 
 const router = Router();
@@ -68,7 +69,11 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     }
 
     if (statusChanged) {
-      sendStatusUpdate(updated, status).catch(() => {});
+      if (status === "completed") {
+        sendPostTripSummary(updated).catch(() => {});
+      } else {
+        sendStatusUpdate(updated, status).catch(() => {});
+      }
     }
   } catch (err) {
     req.log.error(err);
@@ -87,7 +92,6 @@ router.post("/bookings", requireAdmin, async (req, res) => {
     }).returning();
     res.status(201).json(booking);
 
-    // Send emails in background: passenger, admin, and driver (if assigned)
     sendCustomerConfirmation(booking).catch(() => {});
     sendAdminNotification(booking).catch(() => {});
 

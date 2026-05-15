@@ -3,8 +3,13 @@ import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 logger.info({ hasKey: !!process.env.RESEND_API_KEY }, "[mailer] Resend initialized");
-const FROM = "LuxEx Executive Ride <noreply@luxexride.com>";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
+
+// Three sending addresses — each with a clear role
+const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments
+const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
+const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "bookings@luxexride.com";
 
 function fmtTime(t: string): string {
   if (!t) return t ?? "";
@@ -48,11 +53,15 @@ function baseTemplate(body: string): string {
   .alert-info { background:#fffbeb; border:1px solid #F2E147; color:#5a4400; }
   .alert-success { background:#f0fff4; border:1px solid #86efac; color:#14532d; }
   .alert-driver { background:#eff6ff; border:1px solid #93c5fd; color:#1e3a5f; }
+  .alert-reminder { background:#faf5ff; border:1px solid #c4b5fd; color:#3b0764; }
   .btn { display:inline-block; background:#F2E147; color:#0a0a0a !important; font-weight:900; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; text-decoration:none; padding:16px 36px; margin:24px 0 8px; border-radius:1px; }
   .footer { background:#0a0a0a; padding:28px 40px; text-align:center; border-top:1px solid #1a1a1a; }
   .footer p { color:#555; font-size:12px; margin:5px 0; }
   .footer a { color:#F2E147; text-decoration:none; }
   .note { font-size:13px; color:#aaa; margin-top:28px; line-height:1.6; }
+  .price-row { display:flex; justify-content:space-between; padding:8px 0; font-size:14px; border-bottom:1px solid #f0f0f0; }
+  .price-total { display:flex; justify-content:space-between; padding:12px 0; font-size:16px; font-weight:900; border-top:2px solid #0a0a0a; margin-top:8px; }
+  .stars { color:#F2E147; font-size:22px; letter-spacing:4px; margin:12px 0; }
 </style>
 </head>
 <body>
@@ -65,6 +74,7 @@ function baseTemplate(body: string): string {
   ${body}
   <div class="footer">
     <p>LuxEx Executive Ride &nbsp;·&nbsp; <a href="https://www.luxexride.com">www.luxexride.com</a></p>
+    <p><a href="mailto:contact@luxexride.com">contact@luxexride.com</a> &nbsp;·&nbsp; <a href="mailto:info@luxexride.com">info@luxexride.com</a></p>
     <p style="margin-top:8px;">© ${new Date().getFullYear()} LuxEx. All rights reserved.</p>
   </div>
 </div>
@@ -77,7 +87,6 @@ function detailRow(label: string, value: string | number | null | undefined): st
   return `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>`;
 }
 
-// Full booking table — includes price breakdown (for passengers and admin)
 function bookingTable(b: any): string {
   return `<table class="details">
     ${detailRow("Confirmation #", `<strong style="color:#0a0a0a;font-family:'Courier New',monospace;letter-spacing:0.1em;">${b.confirmationCode}</strong>`)}
@@ -96,7 +105,6 @@ function bookingTable(b: any): string {
   </table>`;
 }
 
-// Driver-safe booking table — NO price information shown
 function bookingTableDriver(b: any): string {
   return `<table class="details">
     ${detailRow("Confirmation #", `<strong style="color:#0a0a0a;font-family:'Courier New',monospace;letter-spacing:0.1em;">${b.confirmationCode}</strong>`)}
@@ -138,7 +146,7 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 
       <div class="alert alert-info">
         <strong>Need to make changes?</strong><br>
-        Contact us at <a href="mailto:info@luxexride.com" style="color:#5a4400;">info@luxexride.com</a> or call us.
+        Reply to this email or contact us at <a href="mailto:contact@luxexride.com" style="color:#5a4400;">contact@luxexride.com</a>.
         Cancellations must be made at least 24 hours in advance.
       </div>
 
@@ -148,7 +156,8 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 
   try {
     const result = await resend.emails.send({
-      from: FROM,
+      from: FROM_BOOKINGS,
+      replyTo: REPLY_TO,
       to: [booking.passengerEmail],
       subject: `Booking Confirmed — ${booking.confirmationCode} · LuxEx Executive Ride`,
       html,
@@ -165,10 +174,6 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 export async function sendAdminNotification(booking: any): Promise<void> {
   if (!resend) {
     logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
-    return;
-  }
-  if (!ADMIN_EMAIL) {
-    logger.warn("[mailer] ADMIN_EMAIL not configured — skipping admin notification");
     return;
   }
 
@@ -197,7 +202,7 @@ export async function sendAdminNotification(booking: any): Promise<void> {
 
   try {
     const result = await resend.emails.send({
-      from: FROM,
+      from: FROM_BOOKINGS,
       to: [ADMIN_EMAIL],
       subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
       html,
@@ -240,13 +245,13 @@ export async function sendDriverAssignment(booking: any, driver: { name: string;
         <strong>Reminder:</strong> Arrive at least 10 minutes early. For airport pickups, monitor flight status using the flight number above.
       </div>
 
-      <p class="note">If you have any questions or need to report an issue, contact dispatch immediately.</p>
+      <p class="note">If you have any questions or need to report an issue, contact dispatch at <a href="mailto:bookings@luxexride.com">bookings@luxexride.com</a>.</p>
     </div>
   `);
 
   try {
     const result = await resend.emails.send({
-      from: FROM,
+      from: FROM_BOOKINGS,
       to: [driver.email],
       subject: `Trip Assigned — ${booking.date} at ${fmtTime(booking.time)} · ${booking.confirmationCode}`,
       html,
@@ -297,19 +302,274 @@ export async function sendStatusUpdate(booking: any, newStatus: string): Promise
       ${bookingTable(booking)}
 
       <div class="alert ${info.alertClass}">
-        Questions? Contact us at <a href="mailto:info@luxexride.com" style="color:inherit;">info@luxexride.com</a>
+        Questions? Reply to this email or contact us at <a href="mailto:contact@luxexride.com" style="color:inherit;">contact@luxexride.com</a>
       </div>
     </div>
   `);
 
   try {
     await resend.emails.send({
-      from: FROM,
+      from: FROM_INFO,
+      replyTo: REPLY_TO,
       to: [booking.passengerEmail],
       subject: `Booking ${titleCase(newStatus)} — ${booking.confirmationCode} · LuxEx`,
       html,
     });
   } catch (err) {
     logger.error({ err }, "[mailer] Failed to send status update email");
+  }
+}
+
+// ── 24h Reminder — Passenger ─────────────────────────────────────────────────
+
+export async function sendPassengerReminder24h(booking: any, driver?: { name: string; phone?: string | null } | null): Promise<void> {
+  if (!resend || !booking.passengerEmail) return;
+
+  const driverBlock = driver
+    ? `<div class="section-title">Your Chauffeur</div>
+       <table class="details">
+         ${detailRow("Name", driver.name)}
+         ${driver.phone ? detailRow("Phone", `<a href="tel:${driver.phone}" style="color:#0a0a0a;">${driver.phone}</a>`) : ""}
+       </table>`
+    : `<div class="alert alert-info" style="margin-top:24px;">
+         A chauffeur will be assigned shortly and will contact you before the trip.
+       </div>`;
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h1>Your ride is tomorrow.</h1>
+      <p class="sub">Just a reminder, <strong>${booking.passengerName}</strong> — your LuxEx ride departs in approximately 24 hours.</p>
+
+      <div class="section-title">Trip Details</div>
+      ${bookingTable(booking)}
+
+      ${driverBlock}
+
+      <div class="alert alert-reminder" style="margin-top:24px;">
+        <strong>Need to make changes?</strong><br>
+        Please contact us at least 24 hours before your trip at
+        <a href="mailto:contact@luxexride.com" style="color:#3b0764;">contact@luxexride.com</a>
+        or call us directly.
+      </div>
+
+      <p class="note">Please ensure your phone is reachable at the number provided at booking time.</p>
+    </div>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: FROM_BOOKINGS,
+      replyTo: REPLY_TO,
+      to: [booking.passengerEmail],
+      subject: `Reminder: Your ride is tomorrow — ${booking.date} at ${fmtTime(booking.time)} · ${booking.confirmationCode}`,
+      html,
+    });
+    logger.info({ code: booking.confirmationCode }, "[mailer] 24h passenger reminder sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send 24h passenger reminder");
+  }
+}
+
+// ── 24h Reminder — Driver ────────────────────────────────────────────────────
+
+export async function sendDriverReminder24h(booking: any, driver: { name: string; email?: string | null }): Promise<void> {
+  if (!resend || !driver.email) return;
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h1>Trip tomorrow — be prepared.</h1>
+      <p class="sub">Hello <strong>${driver.name}</strong>, you have a trip scheduled for tomorrow. Please review the details below.</p>
+
+      <div class="section-title">Trip Details</div>
+      ${bookingTableDriver(booking)}
+
+      <div class="section-title">Passenger Contact</div>
+      <table class="details">
+        ${detailRow("Name", booking.passengerName)}
+        ${detailRow("Phone", `<a href="tel:${booking.passengerPhone}" style="color:#0a0a0a;">${booking.passengerPhone}</a>`)}
+      </table>
+
+      <div class="alert alert-driver">
+        <strong>Checklist for tomorrow:</strong>
+        <ul style="margin:8px 0 0; padding-left:18px;">
+          <li>Confirm vehicle is clean and fueled</li>
+          <li>Contact the passenger at least 1 hour before pickup</li>
+          ${booking.flightNumber ? "<li>Monitor flight status throughout the day</li>" : ""}
+          <li>Arrive at pickup location at least 10 minutes early</li>
+          ${booking.meetAndGreet ? "<li>Prepare meet & greet sign with passenger name</li>" : ""}
+        </ul>
+      </div>
+
+      <p class="note">Questions or issues? Contact dispatch at <a href="mailto:bookings@luxexride.com">bookings@luxexride.com</a>.</p>
+    </div>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: FROM_BOOKINGS,
+      to: [driver.email],
+      subject: `Trip Tomorrow — ${booking.date} at ${fmtTime(booking.time)} · ${booking.confirmationCode}`,
+      html,
+    });
+    logger.info({ code: booking.confirmationCode, driver: driver.name }, "[mailer] 24h driver reminder sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send 24h driver reminder");
+  }
+}
+
+// ── 2h Reminder — Passenger ──────────────────────────────────────────────────
+
+export async function sendPassengerReminder2h(booking: any, driver?: { name: string; phone?: string | null } | null): Promise<void> {
+  if (!resend || !booking.passengerEmail) return;
+
+  const driverBlock = driver
+    ? `<div class="section-title">Your Chauffeur</div>
+       <table class="details">
+         ${detailRow("Name", driver.name)}
+         ${driver.phone ? detailRow("Phone", `<a href="tel:${driver.phone}" style="color:#0a0a0a;">${driver.phone}</a>`) : ""}
+       </table>
+       <p style="font-size:14px;color:#555;margin-top:12px;">Your chauffeur will contact you shortly before arrival.</p>`
+    : `<div class="alert alert-info" style="margin-top:24px;">
+         Your chauffeur will contact you shortly. If you have concerns, please call us directly.
+       </div>`;
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h1>Your ride is in 2 hours.</h1>
+      <p class="sub"><strong>${booking.passengerName}</strong> — your LuxEx ride departs at <strong>${fmtTime(booking.time)}</strong>. Please be ready.</p>
+
+      <div class="section-title">Trip Details</div>
+      ${bookingTable(booking)}
+
+      ${driverBlock}
+
+      <div class="alert alert-reminder" style="margin-top:24px;">
+        <strong>Running late or need to reach us?</strong><br>
+        Reply to this email or contact us immediately at
+        <a href="mailto:contact@luxexride.com" style="color:#3b0764;">contact@luxexride.com</a>.
+      </div>
+    </div>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: FROM_BOOKINGS,
+      replyTo: REPLY_TO,
+      to: [booking.passengerEmail],
+      subject: `Your ride is in 2 hours — ${fmtTime(booking.time)} today · ${booking.confirmationCode}`,
+      html,
+    });
+    logger.info({ code: booking.confirmationCode }, "[mailer] 2h passenger reminder sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send 2h passenger reminder");
+  }
+}
+
+// ── 2h Reminder — Driver ─────────────────────────────────────────────────────
+
+export async function sendDriverReminder2h(booking: any, driver: { name: string; email?: string | null }): Promise<void> {
+  if (!resend || !driver.email) return;
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h1>Trip in 2 hours — depart soon.</h1>
+      <p class="sub">Hello <strong>${driver.name}</strong>, your trip starts in approximately 2 hours. Time to head out.</p>
+
+      <div class="section-title">Trip Details</div>
+      ${bookingTableDriver(booking)}
+
+      <div class="section-title">Passenger Contact</div>
+      <table class="details">
+        ${detailRow("Name", booking.passengerName)}
+        ${detailRow("Phone", `<a href="tel:${booking.passengerPhone}" style="color:#0a0a0a;">${booking.passengerPhone}</a>`)}
+      </table>
+
+      <div class="alert alert-driver">
+        <strong>Depart now if not already on the way.</strong><br>
+        Contact the passenger to confirm you are en route. Arrive at least 10 minutes early.
+        ${booking.flightNumber ? `<br><br>Flight: <strong>${booking.flightNumber}</strong> — check real-time status before arrival.` : ""}
+      </div>
+    </div>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: FROM_BOOKINGS,
+      to: [driver.email],
+      subject: `Depart Now — Trip in 2h · ${booking.date} ${fmtTime(booking.time)} · ${booking.confirmationCode}`,
+      html,
+    });
+    logger.info({ code: booking.confirmationCode, driver: driver.name }, "[mailer] 2h driver reminder sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send 2h driver reminder");
+  }
+}
+
+// ── Post-Trip Summary — Passenger ────────────────────────────────────────────
+
+export async function sendPostTripSummary(booking: any): Promise<void> {
+  if (!resend || !booking.passengerEmail) return;
+
+  const breakdown = [
+    booking.baseAmount > 0   ? `<div class="price-row"><span>Base fare</span><span>$${Number(booking.baseAmount).toFixed(2)}</span></div>` : "",
+    booking.mileageAmount > 0 ? `<div class="price-row"><span>Mileage</span><span>$${Number(booking.mileageAmount).toFixed(2)}</span></div>` : "",
+    booking.surchargesAmount > 0 ? `<div class="price-row"><span>Surcharges</span><span>$${Number(booking.surchargesAmount).toFixed(2)}</span></div>` : "",
+    booking.tollsAmount > 0  ? `<div class="price-row"><span>Tolls</span><span>$${Number(booking.tollsAmount).toFixed(2)}</span></div>` : "",
+    booking.promoDiscount > 0 ? `<div class="price-row" style="color:#14532d;"><span>Promo (${booking.promoCode})</span><span>-$${Number(booking.promoDiscount).toFixed(2)}</span></div>` : "",
+  ].filter(Boolean).join("");
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h1>Thank you for riding with us.</h1>
+      <p class="sub"><strong>${booking.passengerName}</strong>, we hope you had an excellent experience with LuxEx Executive Ride.</p>
+
+      <div class="section-title">Trip Summary</div>
+      <table class="details">
+        ${detailRow("Confirmation #", `<strong style="font-family:'Courier New',monospace;letter-spacing:0.1em;">${booking.confirmationCode}</strong>`)}
+        ${detailRow("Date", booking.date)}
+        ${detailRow("Time", fmtTime(booking.time))}
+        ${detailRow("From", booking.pickupAddress)}
+        ${booking.dropoffAddress ? detailRow("To", booking.dropoffAddress) : ""}
+        ${detailRow("Vehicle", titleCase(booking.vehicleType ?? ""))}
+        ${booking.distanceMiles > 0 ? detailRow("Distance", `${Number(booking.distanceMiles).toFixed(1)} miles`) : ""}
+      </table>
+
+      ${breakdown ? `<div class="section-title">Receipt</div>
+      <div style="margin:16px 0;">
+        ${breakdown}
+        <div class="price-total">
+          <span>Total charged (excl. gratuity)</span>
+          <span>$${Number(booking.totalAmount ?? 0).toFixed(2)}</span>
+        </div>
+      </div>` : ""}
+
+      <div class="section-title">We Value Your Feedback</div>
+      <div style="text-align:center; padding:20px 0;">
+        <div class="stars">★ ★ ★ ★ ★</div>
+        <p style="font-size:14px;color:#555;margin:8px 0 20px;">Your feedback helps us maintain the highest standards of service.</p>
+        <a href="mailto:contact@luxexride.com?subject=Feedback for booking ${booking.confirmationCode}" class="btn">Share Your Feedback</a>
+      </div>
+
+      <div class="alert alert-success">
+        <strong>Book your next ride:</strong><br>
+        Visit <a href="https://www.luxexride.com" style="color:#14532d;">www.luxexride.com</a> to schedule your next trip.
+        As a returning passenger, mention confirmation <strong>${booking.confirmationCode}</strong> for priority service.
+      </div>
+
+      <p class="note">Questions about your trip or receipt? Contact us at <a href="mailto:contact@luxexride.com">contact@luxexride.com</a> — we respond within 24 hours.</p>
+    </div>
+  `);
+
+  try {
+    await resend.emails.send({
+      from: FROM_INFO,
+      replyTo: REPLY_TO,
+      to: [booking.passengerEmail],
+      subject: `Trip Completed — Receipt & Summary · ${booking.confirmationCode} · LuxEx`,
+      html,
+    });
+    logger.info({ code: booking.confirmationCode }, "[mailer] post-trip summary sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send post-trip summary");
   }
 }

@@ -8,8 +8,10 @@ const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmat
 const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
 const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
 
-const ADMIN_EMAILS: string[] = (process.env.ADMIN_EMAIL ?? "bookings@luxexride.com")
-  .split(",").map(e => e.trim()).filter(Boolean);
+function getAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAIL ?? "bookings@luxexride.com")
+    .split(",").map(e => e.trim()).filter(Boolean);
+}
 
 function fmtTime(t: string): string {
   if (!t) return t ?? "";
@@ -200,14 +202,15 @@ export async function sendAdminNotification(booking: any): Promise<void> {
     </div>
   `);
 
+  const adminEmails = getAdminEmails();
   try {
     const result = await resend.emails.send({
       from: FROM_BOOKINGS,
-      to: ADMIN_EMAILS,
+      to: adminEmails,
       subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
       html,
     });
-    logger.info({ id: result.data?.id, to: ADMIN_EMAILS }, "[mailer] admin notification sent");
+    logger.info({ id: result.data?.id, to: adminEmails }, "[mailer] admin notification sent");
   } catch (err) {
     logger.error({ err }, "[mailer] Failed to send admin notification");
     throw err;

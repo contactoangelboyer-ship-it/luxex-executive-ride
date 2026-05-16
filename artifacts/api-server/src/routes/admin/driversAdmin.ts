@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { drivers } from "@workspace/db/schema";
+import { adminDrivers as drivers } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
 import { logger } from "../../lib/logger";

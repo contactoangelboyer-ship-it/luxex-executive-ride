@@ -24,12 +24,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Deploy to Vercel (production)
-        run: |
-          cd artifacts/api-server
-          npx vercel deploy --prod \
-            --token=${{ secrets.VERCEL_TOKEN }} \
-            --yes \
-            --build-env NODE_ENV=production
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
           VERCEL_PROJECT_ID: prj_6yj35u6kmMrF1TeOUI4XluSa0QTB

@@ -298,7 +298,36 @@ import { Router } from "express";
     res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null, admin_email: adminEmail });
   });
 
-  // ── Resend booking confirmation to passenger ─────────────────────────────
+
+    // ── DNS / Email Delivery Health ───────────────────────────────────────────
+    router.get("/dns-health", requireAdmin, async (_req, res) => {
+      try {
+        const domain = "luxexride.com";
+        const [mxRes, txtRes] = await Promise.all([
+          fetch(`https://dns.google/resolve?name=${domain}&type=MX`).then(r => r.json()),
+          fetch(`https://dns.google/resolve?name=${domain}&type=TXT`).then(r => r.json()),
+        ]);
+        const mxRecords: string[] = (mxRes.Answer ?? []).map((r: any) => (r.data ?? "").toLowerCase());
+        const txtRecords: string[] = (txtRes.Answer ?? []).map((r: any) => r.data ?? "");
+        const hasMx1  = mxRecords.some(v => v.includes("mx1.privateemail.com"));
+        const hasMx2  = mxRecords.some(v => v.includes("mx2.privateemail.com"));
+        const hasSpf  = txtRecords.some(v => v.includes("spf") && v.includes("privateemail.com"));
+        const resendOk = !!process.env.RESEND_API_KEY;
+        const smtpOk   = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+        const checks = [
+          { id: "mx1",    label: "MX1 Record",        ok: hasMx1,   detail: hasMx1   ? "mx1.privateemail.com active"          : "Missing — incoming email may fail" },
+          { id: "mx2",    label: "MX2 Record",        ok: hasMx2,   detail: hasMx2   ? "mx2.privateemail.com active"          : "Missing — no failover MX" },
+          { id: "spf",    label: "SPF Record",         ok: hasSpf,   detail: hasSpf   ? "v=spf1 include:spf.privateemail.com" : "Missing or incorrect SPF" },
+          { id: "resend", label: "Resend (outbound)",  ok: resendOk, detail: resendOk ? "API key configured"                  : "RESEND_API_KEY not set" },
+          { id: "smtp",   label: "SMTP (corporate)",   ok: smtpOk,   detail: smtpOk   ? "SMTP credentials configured"         : "Not configured" },
+        ];
+        res.json({ ok: checks.every(c => c.ok), domain, checks, checkedAt: new Date().toISOString() });
+      } catch (err: any) {
+        res.status(500).json({ ok: false, error: err?.message ?? "DNS check failed", checks: [] });
+      }
+    });
+
+    // ── Resend booking confirmation to passenger ─────────────────────────────
   router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
     try {
       const booking = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id))).then(r => r[0]);

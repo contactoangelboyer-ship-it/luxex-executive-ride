@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Users, Clock, DollarSign, ChevronRight, AlertTriangle,
   TrendingUp, TrendingDown, Car, MapPin, Activity, RefreshCw,
-  ArrowRight, Receipt, CalendarCheck,
+  ArrowRight, Receipt, CalendarCheck, CheckCircle2, XCircle, Mail, Wifi,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -196,6 +196,8 @@ export default function Dashboard() {
   const [allBookings, setAllBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dnsHealth, setDnsHealth] = useState<any>(null);
+  const [dnsHealth, setDnsHealth] = useState<any>(null);
   const [activeChart, setActiveChart] = useState<"revenue" | "count">("revenue");
 
   const load = useCallback(async (silent = false) => {
@@ -207,6 +209,7 @@ export default function Dashboard() {
       ]);
       setData(dashData);
       setAllBookings(bookings);
+      adminApi.dnsHealth().then(setDnsHealth).catch(() => {});
     } catch (e) { console.error(e); } finally {
       setLoading(false); setRefreshing(false);
     }
@@ -343,7 +346,42 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Charts Row */}
+          {/* System Health */}
+          {dnsHealth && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-[#0f0f0f] border border-white/[0.06] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Wifi className="w-3.5 h-3.5 text-white/30" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">System Health</span>
+                </div>
+                {dnsHealth.ok
+                  ? <span className="text-[9px] font-bold text-green-400 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> All systems operational</span>
+                  : <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest flex items-center gap-1"><XCircle className="w-3 h-3" /> Action required</span>
+                }
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {dnsHealth.checks?.map((check: any) => (
+                  <div key={check.id} title={check.detail}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-[10px] font-bold cursor-default ${check.ok ? "border-white/[0.06] bg-white/[0.02] text-white/40" : "border-red-500/30 bg-red-500/10 text-red-400"}`}>
+                    {check.ok ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" /> : <XCircle className="w-3 h-3 text-red-400 shrink-0" />}
+                    {check.label}
+                  </div>
+                ))}
+                <button onClick={() => adminApi.dnsHealth().then(setDnsHealth).catch(() => {})}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 border border-white/[0.06] text-[10px] font-bold text-white/20 hover:text-white hover:border-white/20 transition-colors">
+                  <RefreshCw className="w-3 h-3" /> Refresh
+                </button>
+              </div>
+              {!dnsHealth.ok && (
+                <p className="text-[10px] text-white/30 mt-2 leading-relaxed">
+                  Items in red indicate a configuration problem. Hover each badge to see details.
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Revenue / Count Area Chart */}
           <div className="lg:col-span-2 bg-[#0f0f0f] border border-white/[0.06] p-5">

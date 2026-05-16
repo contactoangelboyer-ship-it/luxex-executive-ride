@@ -84,4 +84,6 @@ export const adminApi = {
     update: (id: number, body: any) => req<any>("PATCH", `/promotions/${id}`, body),
     delete: (id: number) => req<any>("DELETE", `/promotions/${id}`),
   },
+
+  dnsHealth: () => req<any>("GET", "/dns-health"),
 };

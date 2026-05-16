@@ -197,7 +197,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dnsHealth, setDnsHealth] = useState<any>(null);
-  const [dnsHealth, setDnsHealth] = useState<any>(null);
   const [activeChart, setActiveChart] = useState<"revenue" | "count">("revenue");
 
   const load = useCallback(async (silent = false) => {

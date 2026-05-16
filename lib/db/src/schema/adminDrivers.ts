@@ -16,6 +16,7 @@ export const adminDrivers = pgTable("admin_drivers", {
   verificationStatus: varchar("verification_status", { length: 30 }).notNull().default("pending"),
   accessPin: varchar("access_pin", { length: 10 }),
   pinGeneratedAt: timestamp("pin_generated_at"),
+  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

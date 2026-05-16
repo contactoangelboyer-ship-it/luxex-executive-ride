@@ -224,6 +224,34 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
   }
 });
 
+// ── Driver self-upload photo (by email, no admin auth) ───────────────────────
+router.patch("/drivers/photo", async (req, res) => {
+  try {
+    if (!db) { res.status(503).json({ error: "DB not configured" }); return; }
+    const { email, photoUrl } = req.body;
+    if (!email || !photoUrl) { res.status(400).json({ error: "email and photoUrl are required" }); return; }
+    const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.email, email));
+    if (!driver) { res.status(404).json({ error: "Driver not found" }); return; }
+    const [updated] = await db.update(adminDrivers).set({ photoUrl, updatedAt: new Date() }).where(eq(adminDrivers.email, email)).returning();
+    res.json(updated);
+  } catch (err) { logger.error({ err }, "Failed to update driver photo"); res.status(500).json({ error: "Failed" }); }
+});
+
+// ── Passenger photo after booking ─────────────────────────────────────────────
+router.patch("/bookings/:id/passenger-photo", async (req, res) => {
+  try {
+    if (!db) { res.status(503).json({ error: "DB not configured" }); return; }
+    const id = Number(req.params.id);
+    const { photoUrl, confirmationCode } = req.body;
+    if (!photoUrl || !confirmationCode) { res.status(400).json({ error: "photoUrl and confirmationCode are required" }); return; }
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
+    if (booking.confirmationCode !== confirmationCode) { res.status(403).json({ error: "Invalid confirmation code" }); return; }
+    const [updated] = await db.update(bookings).set({ passengerPhotoUrl: photoUrl, updatedAt: new Date() }).where(eq(bookings.id, id)).returning();
+    res.json(updated);
+  } catch (err) { logger.error({ err }, "Failed to update passenger photo"); res.status(500).json({ error: "Failed" }); }
+});
+
 router.post("/bookings", async (req, res) => {
   try {
     if (!db) { res.status(503).json({ error: "DB not configured" }); return; }

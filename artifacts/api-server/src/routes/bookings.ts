@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, pricingConfig, adminDrivers, vehicles, zones, promotions } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate, sendPostTripSummary } from "../lib/mailer";
+import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate, sendAdminStatusUpdate, sendPostTripSummary } from "../lib/mailer";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -205,11 +205,18 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
 
     res.json(updated);
 
-    // Send appropriate email notification after status change
+    const driverInfo = { name: driver.name, phone: driver.phone };
+
+    // Passenger email
     if (status === "completed") {
       sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"));
     } else {
-      sendStatusUpdate(updated, status).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
+      sendStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
+    }
+
+    // Admin email for every status change (completed included)
+    if (status === "completed") {
+      sendAdminStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] admin completed email failed"));
     }
   } catch (err) {
     logger.error({ err }, "Failed to update driver status");
@@ -226,12 +233,20 @@ router.post("/bookings", async (req, res) => {
       vehicleType, flightNumber, flightType, passengerName, passengerPhone,
       passengerEmail, notes, meetAndGreet, childSeat,
       baseAmount, mileageAmount, surchargesAmount, tollsAmount, totalAmount,
-      distanceMiles, promoCode, promoDiscount,
+      distanceMiles, promoCode, promoDiscount, additionalStops,
     } = req.body;
 
     if (!service || !pickupAddress || !date || !time || !passengerName || !passengerPhone || !passengerEmail) {
       res.status(400).json({ error: "Missing required fields" });
       return;
+    }
+
+    // Serialize stops as JSON string for storage
+    let stopsJson: string | null = null;
+    if (Array.isArray(additionalStops) && additionalStops.length > 0) {
+      stopsJson = JSON.stringify(additionalStops.filter(Boolean));
+    } else if (typeof additionalStops === "string" && additionalStops.trim()) {
+      stopsJson = additionalStops;
     }
 
     const confirmationCode = generateCode();
@@ -248,6 +263,7 @@ router.post("/bookings", async (req, res) => {
       surchargesAmount: surchargesAmount ?? 0, tollsAmount: tollsAmount ?? 0,
       totalAmount: totalAmount ?? 0, distanceMiles: distanceMiles ?? 0,
       promoCode, promoDiscount: promoDiscount ?? 0,
+      additionalStops: stopsJson,
     }).returning();
 
     res.status(201).json({ booking, confirmationCode });

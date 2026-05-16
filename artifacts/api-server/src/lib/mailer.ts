@@ -283,6 +283,21 @@ export async function sendStatusUpdate(booking: any, newStatus: string): Promise
       message: "Your reservation is confirmed and a chauffeur is being arranged for your trip.",
       alertClass: "alert-success",
     },
+    en_route: {
+      title: "Your driver is on the way.",
+      message: "Your chauffeur is heading to your pickup location. Please be ready at the pickup address.",
+      alertClass: "alert-driver",
+    },
+    on_site: {
+      title: "Your driver has arrived.",
+      message: "Your chauffeur is at the pickup location and waiting for you. Please proceed to the vehicle.",
+      alertClass: "alert-success",
+    },
+    in_progress: {
+      title: "Your trip has started.",
+      message: "You are now on your way. Sit back and enjoy the ride.",
+      alertClass: "alert-success",
+    },
     cancelled: {
       title: "Your booking has been cancelled.",
       message: "Your reservation has been cancelled. If you believe this is an error, please contact us immediately.",

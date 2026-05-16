@@ -54,9 +54,14 @@ export const adminApi = {
 
   drivers: {
     list: () => req<any[]>("GET", "/drivers"),
+    get: (id: number) => req<any>("GET", `/drivers/${id}`),
     create: (body: any) => req<any>("POST", "/drivers", body),
     update: (id: number, body: any) => req<any>("PATCH", `/drivers/${id}`, body),
     delete: (id: number) => req<any>("DELETE", `/drivers/${id}`),
+    generatePin: (id: number) => req<any>("POST", `/drivers/${id}/generate-pin`),
+    setPin: (id: number, pin: string) => req<any>("PATCH", `/drivers/${id}/pin`, { pin }),
+    verify: (id: number, verificationStatus: "pending" | "verified" | "rejected") =>
+      req<any>("PATCH", `/drivers/${id}/verify`, { verificationStatus }),
   },
 
   vehicles: {

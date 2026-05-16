@@ -150,7 +150,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     if (!["pending", "confirmed"].includes(booking.status)) {
       res.status(400).json({ error: "Cannot cancel this booking" }); return;
     }
-    const [updated] = await db.update(bookings).set({ status: "cancelled" })
+    const [updated] = await db.update(bookings).set({ status: "cancelled", updatedAt: new Date() })
       .where(eq(bookings.id, id)).returning();
     res.json(updated);
 
@@ -161,27 +161,51 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
   }
 });
 
+// ── Driver Status Update — full ride lifecycle ──────────────────────────────
+//
+// Valid transitions the driver can initiate:
+//   assigned    → en_route   (driver heading to pickup)
+//   en_route    → on_site    (driver arrived at pickup location)
+//   on_site     → in_progress (passenger boarded, trip started)
+//   in_progress → completed  (trip finished)
+//
+//   assigned | en_route | on_site | in_progress → cancelled (driver cancel)
+//
 router.patch("/bookings/:id/driver-status", async (req, res) => {
   try {
     if (!db) { res.status(503).json({ error: "DB not configured" }); return; }
     const id = Number(req.params.id);
     const { email, status } = req.body;
     if (!email || !status) { res.status(400).json({ error: "email and status required" }); return; }
+
     const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.email, email));
     if (!driver) { res.status(403).json({ error: "Driver not found" }); return; }
+
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
     if (!booking) { res.status(404).json({ error: "Not found" }); return; }
     if (booking.driverId !== driver.id) { res.status(403).json({ error: "Unauthorized" }); return; }
+
     const ALLOWED: Record<string, string[]> = {
-      assigned: ["in_progress"],
-      in_progress: ["completed"],
+      assigned:    ["en_route",    "cancelled"],
+      en_route:    ["on_site",     "cancelled"],
+      on_site:     ["in_progress", "cancelled"],
+      in_progress: ["completed",   "cancelled"],
     };
+
     if (!ALLOWED[booking.status]?.includes(status)) {
-      res.status(400).json({ error: `Cannot transition from ${booking.status} to ${status}` }); return;
+      res.status(400).json({ error: `Cannot transition from "${booking.status}" to "${status}"` });
+      return;
     }
-    const [updated] = await db.update(bookings).set({ status }).where(eq(bookings.id, id)).returning();
+
+    const [updated] = await db
+      .update(bookings)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(bookings.id, id))
+      .returning();
+
     res.json(updated);
 
+    // Send appropriate email notification after status change
     if (status === "completed") {
       sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"));
     } else {

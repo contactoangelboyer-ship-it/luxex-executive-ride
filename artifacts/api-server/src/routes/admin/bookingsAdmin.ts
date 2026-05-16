@@ -93,13 +93,13 @@ router.post("/bookings", requireAdmin, async (req, res) => {
     }).returning();
     res.status(201).json(booking);
 
-    sendCustomerConfirmation(booking).catch(() => {});
-    sendAdminNotification(booking).catch(() => {});
+    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (admin create)"));
+    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (admin create)"));
 
     if (booking.driverId) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, booking.driverId));
       if (driver?.email) {
-        sendDriverAssignment(booking, driver).catch(() => {});
+        sendDriverAssignment(booking, driver).catch((err) => logger.error({ err }, "[mailer] driver assignment failed (admin create)"));
       }
     }
   } catch (err) {

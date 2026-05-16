@@ -31,10 +31,20 @@ function getResendAdminEmails(): string[] {
     .split(",").map(e => e.trim()).filter(Boolean);
 }
 
-// SMTP recipients: corporate @luxexride.com addresses sent via Namecheap SMTP
+// Corporate admin inboxes — hardcoded as default so emails always have a
+// destination even when ADMIN_EMAIL_CORPORATE is not set in the environment.
+const CORPORATE_ADMIN_EMAILS_DEFAULT = [
+  "contact@luxexride.com",
+  "info@luxexride.com",
+  "bookings@luxexride.com",
+];
+
+// SMTP recipients: corporate @luxexride.com addresses sent via Namecheap SMTP.
+// Falls back to the three primary corporate inboxes when the env var is absent.
 function getSmtpAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAIL_CORPORATE ?? "")
+  const fromEnv = (process.env.ADMIN_EMAIL_CORPORATE ?? "")
     .split(",").map(e => e.trim()).filter(Boolean);
+  return fromEnv.length > 0 ? fromEnv : CORPORATE_ADMIN_EMAILS_DEFAULT;
 }
 
 function fmtTime(t: string): string {

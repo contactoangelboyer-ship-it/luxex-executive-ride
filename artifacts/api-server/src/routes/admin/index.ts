@@ -291,5 +291,25 @@ import { Router } from "express";
     } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to delete promotion" }); }
   });
 
+  router.post("/run-migrations", requireAdmin, async (_req, res) => {
+    try {
+      const { pool } = await import("@workspace/db");
+      const statements = [
+        `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS hours INTEGER`,
+        `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS admin_notes TEXT`,
+        `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reminder_24h_sent_at TIMESTAMP`,
+        `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reminder_2h_sent_at TIMESTAMP`,
+      ];
+      const results: string[] = [];
+      for (const sql of statements) {
+        await pool!.query(sql);
+        results.push(sql);
+      }
+      res.json({ ok: true, applied: results });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? "Migration failed" });
+    }
+  });
+
   export default router;
   

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { bookings, drivers, vehicles } from "@workspace/db/schema";
+import { bookings, adminDrivers as drivers, vehicles } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
 import { logger } from "../../lib/logger";

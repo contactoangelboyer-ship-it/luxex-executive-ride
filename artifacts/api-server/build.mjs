@@ -15,12 +15,17 @@ import { createRequire } from "node:module";
     "isolated-vm","lightningcss","pg-native","oracledb","mongodb-client-encryption","nodemailer",
     "handlebars","knex","typeorm","protobufjs","onnxruntime-node","@tensorflow/*","@prisma/client",
     "@mikro-orm/*","@grpc/*","@swc/*","@aws-sdk/*","@azure/*","@opentelemetry/*","@google-cloud/*",
-    "@google/*","googleapis","firebase-admin","@parcel/watcher","@sentry/profiling-node",
+    "@google/*","googleapis","google-auth-library","firebase-admin","@parcel/watcher","@sentry/profiling-node",
     "@tree-sitter/*","aws-sdk","classic-level","dd-trace","ffi-napi","grpc","hiredis","kerberos",
     "leveldown","miniflare","mysql2","newrelic","odbc","piscina","realm","ref-napi","rocksdb",
     "sass-embedded","sequelize","serialport","snappy","tinypool","usb","workerd","wrangler",
     "zeromq","zeromq-prebuilt","playwright","puppeteer","puppeteer-core","electron",
   ];
+
+  // Packages that are external in the regular Replit build but must be bundled
+  // in the serverless build because Vercel's function environment has no node_modules.
+  // @google-cloud/storage and its auth dependencies are pure-JS and safe to bundle.
+  const SERVERLESS_REBUNDLE = ["@google-cloud/*","@google/*","googleapis","google-auth-library"];
 
   // Extra externals for the serverless build only.
   // React/Clerk packages can bundle browser-only globals that crash Node.js cold starts.
@@ -28,6 +33,10 @@ import { createRequire } from "node:module";
     "react","react-dom","react/jsx-runtime","react/jsx-dev-runtime",
     "@react-email/*","@clerk/express","@clerk/shared","@clerk/backend","@clerk/*",
   ];
+
+  const SERVERLESS_EXTERNALS = EXTERNALS
+    .filter(e => !SERVERLESS_REBUNDLE.some(r => e === r || (r.endsWith("/*") && e.startsWith(r.slice(0,-1)))))
+    .concat(SERVERLESS_EXTRA_EXTERNALS, ["pino-pretty","thread-stream","node-cron"]);
 
   const BANNER = {
     js: `import { createRequire as __bannerCrReq } from 'node:module';
@@ -73,7 +82,7 @@ import { createRequire } from "node:module";
       logLevel: "info",
       // Replace pino with a console.log stub — pino's worker-thread internals can crash Vercel Node.js 22
         alias: { "pino": path.resolve(artifactDir, "src/lib/pino-stub.js") },
-        external: [...EXTERNALS, ...SERVERLESS_EXTRA_EXTERNALS, "pino-pretty", "thread-stream", "node-cron"],
+        external: SERVERLESS_EXTERNALS,
       sourcemap: false,
       banner: BANNER,
     });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
@@ -128,6 +128,8 @@ export default function Bookings() {
   const [createForm, setCreateForm] = useState<typeof EMPTY_FORM>(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -154,6 +156,21 @@ export default function Bookings() {
     setAdminNotes(b.adminNotes ?? "");
     setSelectedStatus(b.status);
     setSaveError("");
+    setResendMsg(null);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!selected) return;
+    setResending(true);
+    setResendMsg(null);
+    try {
+      await adminApi.bookings.resendConfirmation(selected.id);
+      setResendMsg({ ok: true, text: `Confirmation email sent to ${selected.passengerEmail}` });
+    } catch (e: any) {
+      setResendMsg({ ok: false, text: e?.message ?? "Failed to send email. Please try again." });
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleDriverChange = (driverId: string) => {
@@ -703,6 +720,23 @@ export default function Bookings() {
                   >
                     {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving…</> : "Save Changes"}
                   </button>
+
+                  <div className="border-t border-white/[0.05] pt-3">
+                    <p className="text-[10px] uppercase tracking-widest text-white/20 mb-2 font-bold">Email</p>
+                    {resendMsg && (
+                      <p className={`text-xs px-3 py-2 mb-2 border ${resendMsg.ok ? "text-green-400 bg-green-400/10 border-green-400/20" : "text-red-400 bg-red-400/10 border-red-400/20"}`}>
+                        {resendMsg.text}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      disabled={resending}
+                      className="w-full py-2.5 text-[11px] font-bold tracking-widest uppercase border border-white/10 text-white/50 hover:text-white hover:border-white/30 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {resending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Sending…</> : <><Mail className="w-3.5 h-3.5" />Resend Confirmation Email</>}
+                    </button>
+                  </div>
                 </div>
 
                 {selected.notes && (

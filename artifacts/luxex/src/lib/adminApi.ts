@@ -49,6 +49,7 @@ export const adminApi = {
     get: (id: number) => req<any>("GET", `/bookings/${id}`),
     create: (body: any) => req<any>("POST", "/bookings", body),
     update: (id: number, body: any) => req<any>("PATCH", `/bookings/${id}`, body),
+    resendConfirmation: (id: number) => req<any>("POST", `/bookings/${id}/resend-confirmation`),
   },
 
   drivers: {

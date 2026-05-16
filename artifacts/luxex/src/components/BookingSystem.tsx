@@ -116,7 +116,7 @@ function calcPrice(state: BookingState, v: VehicleCfg, rawMiles: number, promoDi
     ? parseFloat(((base + mileage) * (zoneSurchargePct / 100) + zoneFlatFee).toFixed(2)) : 0;
   const meetGreet = state.meetAndGreet ? 25 : 0;
   const childSeat = state.childSeat ? 15 : 0;
-  const stopsFee = validStops * 15;
+  const stopsFee = isHourly ? 0 : validStops * 15;
   const tolls = !isHourly ? (miles > 40 ? 32 : miles > 15 ? 20 : 12) : 0;
   const beforePromo = parseFloat((base + mileage + airportFee + afterHours + weekend + zoneSurcharge + meetGreet + childSeat + tolls + stopsFee).toFixed(2));
   const promoDiscount = promoDiscountPct > 0
@@ -391,6 +391,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
           service: b.service,
           pickupAddress: b.pickup.display_name, pickupLat: b.pickup.lat, pickupLon: b.pickup.lon,
           dropoffAddress: b.dropoff?.display_name ?? null, dropoffLat: b.dropoff?.lat ?? null, dropoffLon: b.dropoff?.lon ?? null,
+          additionalStops: validStops.length > 0 ? validStops.map(s => s.display_name) : null,
           date: b.date, time: b.time, passengers: b.passengers, bags: b.bags,
           hours: b.service === "hourly" ? b.hours : null, vehicleType: b.vehicleId,
           flightNumber: b.flightNumber || null, flightType: b.flightType,
@@ -575,11 +576,13 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             </div>
                           ))}
 
-                          {b.stops.length < 4 && b.service !== "hourly" && (
+                          {b.stops.length < 4 && (
                             <button onClick={addStop}
                               className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-[#F2E147] transition-colors py-1">
                               <Plus className="w-3.5 h-3.5" />
-                              Add intermediate stop {b.stops.length > 0 ? `(${b.stops.length + 1} of 4)` : "· $15 each"}
+                              {b.service === "hourly"
+                                ? `Add stop ${b.stops.length > 0 ? `(${b.stops.length + 1} of 4)` : "· included in hourly rate"}`
+                                : `Add intermediate stop ${b.stops.length > 0 ? `(${b.stops.length + 1} of 4)` : "· $15 each"}`}
                             </button>
                           )}
 
@@ -807,12 +810,12 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           <div className="bg-[#0f0f0f] border border-white/[0.07] p-5 space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-xs">
                               {([
-                                ["Service", b.service?.replace("_", " ")],
+                                ["Service", b.service === "hourly" ? `Hourly / As-Directed · ${b.hours}h` : b.service?.replace("_", " ")],
                                 ["Date & Time", `${b.date} · ${b.time}`],
                                 ["Pickup", b.pickup?.short_name],
-                                validStops.length > 0 ? ["Stops", `${validStops.length} intermediate`] : null,
+                                ...validStops.map((s, i) => [`Stop ${i + 1}`, s.short_name] as [string, string]),
                                 ["Drop-off", b.dropoff?.short_name ?? (b.service === "hourly" ? "As directed" : "—")],
-                                routeInfo ? ["Route", `${routeInfo.distanceMiles.toFixed(1)} mi · ${routeInfo.durationMin} min`] : null,
+                                routeInfo && b.service !== "hourly" ? ["Route", `${routeInfo.distanceMiles.toFixed(1)} mi · ${routeInfo.durationMin} min`] : null,
                                 ["Passengers", `${b.passengers} pax · ${b.bags} bags`],
                                 ["Vehicle", selectedVehicle?.name],
                                 ["Contact", b.name],

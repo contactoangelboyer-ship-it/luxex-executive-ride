@@ -291,5 +291,24 @@ import { Router } from "express";
     } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to delete promotion" }); }
   });
 
+  // ── Email diagnostic ─────────────────────────────────────────────────────
+  router.get("/email-status", requireAdmin, async (_req, res) => {
+    const hasKey = !!process.env.RESEND_API_KEY;
+    res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null });
+  });
+
+  // ── Resend booking confirmation to passenger ─────────────────────────────
+  router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
+    try {
+      const booking = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id))).then(r => r[0]);
+      if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
+      const { sendCustomerConfirmation } = await import("../../lib/mailer");
+      await sendCustomerConfirmation(booking);
+      res.json({ ok: true, to: booking.passengerEmail });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? "Failed to resend confirmation" });
+    }
+  });
+
   export default router;
   

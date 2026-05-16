@@ -92,13 +92,26 @@ function detailRow(label: string, value: string | number | null | undefined): st
   return `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>`;
 }
 
+function parseStops(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr.filter(Boolean) : []; }
+  catch { return []; }
+}
+
+function stopsRows(b: any): string {
+  const stops = parseStops(b.additionalStops);
+  return stops.map((s, i) => detailRow(`Stop ${i + 1}`, s)).join("\n");
+}
+
 function bookingTable(b: any): string {
   return `<table class="details">
     ${detailRow("Confirmation #", `<strong style="color:#0a0a0a;font-family:'Courier New',monospace;letter-spacing:0.1em;">${b.confirmationCode}</strong>`)}
     ${detailRow("Service", titleCase(b.service ?? ""))}
     ${detailRow("Date", b.date)}
     ${detailRow("Time", fmtTime(b.time))}
+    ${b.hours ? detailRow("Duration", `${b.hours} hours`) : ""}
     ${detailRow("Pickup", b.pickupAddress)}
+    ${stopsRows(b)}
     ${b.dropoffAddress ? detailRow("Drop-off", b.dropoffAddress) : ""}
     ${detailRow("Vehicle", titleCase(b.vehicleType ?? ""))}
     ${detailRow("Passengers", b.passengers)}
@@ -116,7 +129,9 @@ function bookingTableDriver(b: any): string {
     ${detailRow("Service", titleCase(b.service ?? ""))}
     ${detailRow("Date", b.date)}
     ${detailRow("Time", fmtTime(b.time))}
+    ${b.hours ? detailRow("Duration", `${b.hours} hours`) : ""}
     ${detailRow("Pickup", b.pickupAddress)}
+    ${stopsRows(b)}
     ${b.dropoffAddress ? detailRow("Drop-off", b.dropoffAddress) : ""}
     ${detailRow("Vehicle", titleCase(b.vehicleType ?? ""))}
     ${detailRow("Passengers", b.passengers)}
@@ -272,76 +287,177 @@ export async function sendDriverAssignment(booking: any, driver: { name: string;
   }
 }
 
-// ── Booking Status Update to Customer ────────────────────────────────────────
+// ── Status labels for emails ──────────────────────────────────────────────────
 
-export async function sendStatusUpdate(booking: any, newStatus: string): Promise<void> {
-  if (!resend || !booking.passengerEmail) return;
+const STATUS_EMAIL_MAP: Record<string, { title: string; passengerMsg: string; adminMsg: string; alertClass: string; subjectVerb: string }> = {
+  confirmed: {
+    title: "Your booking has been confirmed.",
+    passengerMsg: "Your reservation is confirmed and a chauffeur is being arranged for your trip.",
+    adminMsg: "The booking has been confirmed.",
+    alertClass: "alert-success",
+    subjectVerb: "Confirmed",
+  },
+  en_route: {
+    title: "Your driver is on the way.",
+    passengerMsg: "Your chauffeur is heading to your pickup location. Please be ready at the pickup address.",
+    adminMsg: "The driver has marked themselves as En Route to the pickup location.",
+    alertClass: "alert-driver",
+    subjectVerb: "Driver En Route",
+  },
+  on_site: {
+    title: "Your driver has arrived.",
+    passengerMsg: "Your chauffeur is at the pickup location and waiting for you. Please proceed to the vehicle.",
+    adminMsg: "The driver has arrived at the pickup location and is waiting for the passenger.",
+    alertClass: "alert-success",
+    subjectVerb: "Driver On Site",
+  },
+  in_progress: {
+    title: "Your trip has started.",
+    passengerMsg: "You are now on your way. Sit back and enjoy the ride.",
+    adminMsg: "The trip has started. The passenger is on their way.",
+    alertClass: "alert-success",
+    subjectVerb: "Trip Started",
+  },
+  cancelled: {
+    title: "Your booking has been cancelled.",
+    passengerMsg: "Your reservation has been cancelled. If you believe this is an error, please contact us immediately.",
+    adminMsg: "A booking has been cancelled. Please review and follow up as needed.",
+    alertClass: "alert-info",
+    subjectVerb: "Cancelled",
+  },
+  completed: {
+    title: "Thank you for riding with us.",
+    passengerMsg: "We hope you enjoyed your experience with LuxEx Executive Ride. We look forward to serving you again.",
+    adminMsg: "The trip has been marked as completed by the driver.",
+    alertClass: "alert-success",
+    subjectVerb: "Completed",
+  },
+};
 
-  const statusMap: Record<string, { title: string; message: string; alertClass: string }> = {
-    confirmed: {
-      title: "Your booking has been confirmed.",
-      message: "Your reservation is confirmed and a chauffeur is being arranged for your trip.",
-      alertClass: "alert-success",
-    },
-    en_route: {
-      title: "Your driver is on the way.",
-      message: "Your chauffeur is heading to your pickup location. Please be ready at the pickup address.",
-      alertClass: "alert-driver",
-    },
-    on_site: {
-      title: "Your driver has arrived.",
-      message: "Your chauffeur is at the pickup location and waiting for you. Please proceed to the vehicle.",
-      alertClass: "alert-success",
-    },
-    in_progress: {
-      title: "Your trip has started.",
-      message: "You are now on your way. Sit back and enjoy the ride.",
-      alertClass: "alert-success",
-    },
-    cancelled: {
-      title: "Your booking has been cancelled.",
-      message: "Your reservation has been cancelled. If you believe this is an error, please contact us immediately.",
-      alertClass: "alert-info",
-    },
-    completed: {
-      title: "Thank you for riding with us.",
-      message: "We hope you enjoyed your experience with LuxEx Executive Ride. We look forward to serving you again.",
-      alertClass: "alert-success",
-    },
-  };
+// ── Booking Status Update to Passenger ───────────────────────────────────────
 
-  const info = statusMap[newStatus];
+export async function sendStatusUpdate(
+  booking: any,
+  newStatus: string,
+  driver?: { name: string; phone?: string | null } | null,
+): Promise<void> {
+  if (!resend) return;
+
+  const info = STATUS_EMAIL_MAP[newStatus];
   if (!info) return;
 
-  const html = baseTemplate(`
+  const driverBlock = driver
+    ? `<div class="section-title">Your Chauffeur</div>
+       <table class="details">
+         ${detailRow("Name", driver.name)}
+         ${driver.phone ? detailRow("Phone", `<a href="tel:${driver.phone}" style="color:#0a0a0a;">${driver.phone}</a>`) : ""}
+       </table>`
+    : "";
+
+  // ── Passenger email ──
+  if (booking.passengerEmail) {
+    const passengerHtml = baseTemplate(`
+      <div class="body">
+        <h1>${info.title}</h1>
+        <p class="sub">${info.passengerMsg}</p>
+
+        <div class="code-box">
+          <div class="code-label">Confirmation Code</div>
+          <div class="code-val">${booking.confirmationCode}</div>
+        </div>
+
+        <div class="section-title">Trip Details</div>
+        ${bookingTable(booking)}
+
+        ${driverBlock}
+
+        <div class="alert ${info.alertClass}">
+          Questions? Reply to this email or contact us at <a href="mailto:contact@luxexride.com" style="color:inherit;">contact@luxexride.com</a>
+        </div>
+      </div>
+    `);
+    try {
+      await resend.emails.send({
+        from: FROM_INFO,
+        replyTo: REPLY_TO,
+        to: [booking.passengerEmail],
+        subject: `${info.subjectVerb} — ${booking.confirmationCode} · LuxEx Executive Ride`,
+        html: passengerHtml,
+      });
+      logger.info({ status: newStatus, code: booking.confirmationCode }, "[mailer] passenger status email sent");
+    } catch (err) {
+      logger.error({ err }, "[mailer] Failed to send passenger status update email");
+    }
+  }
+
+  // ── Admin email ──
+  await sendAdminStatusUpdate(booking, newStatus, driver).catch((err) =>
+    logger.error({ err }, "[mailer] Failed to send admin status update email"),
+  );
+}
+
+// ── Admin Status Change Notification ─────────────────────────────────────────
+
+export async function sendAdminStatusUpdate(
+  booking: any,
+  newStatus: string,
+  driver?: { name: string; phone?: string | null } | null,
+): Promise<void> {
+  if (!resend) return;
+
+  const info = STATUS_EMAIL_MAP[newStatus];
+  if (!info) return;
+
+  const statusColors: Record<string, string> = {
+    en_route: "#fbbf24", on_site: "#34d399", in_progress: "#34d399",
+    completed: "#34d399", cancelled: "#f87171", confirmed: "#60a5fa",
+  };
+  const badgeColor = statusColors[newStatus] ?? "#aaa";
+
+  const adminHtml = baseTemplate(`
     <div class="body">
-      <h1>${info.title}</h1>
-      <p class="sub">${info.message}</p>
+      <h1>Booking Status Changed</h1>
+      <p class="sub">${info.adminMsg}</p>
+
+      <div style="display:inline-block;background:${badgeColor}22;border:1px solid ${badgeColor}55;padding:10px 20px;margin:16px 0;">
+        <span style="font-size:13px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;color:${badgeColor};">${info.subjectVerb}</span>
+      </div>
 
       <div class="code-box">
         <div class="code-label">Confirmation Code</div>
         <div class="code-val">${booking.confirmationCode}</div>
       </div>
 
+      ${driver ? `<div class="section-title">Driver</div>
+      <table class="details">
+        ${detailRow("Name", driver.name)}
+        ${driver.phone ? detailRow("Phone", `<a href="tel:${driver.phone}" style="color:#0a0a0a;">${driver.phone}</a>`) : ""}
+      </table>` : ""}
+
       <div class="section-title">Trip Details</div>
       ${bookingTable(booking)}
 
-      <div class="alert ${info.alertClass}">
-        Questions? Reply to this email or contact us at <a href="mailto:contact@luxexride.com" style="color:inherit;">contact@luxexride.com</a>
-      </div>
+      <div class="section-title">Passenger</div>
+      <table class="details">
+        ${detailRow("Name", booking.passengerName)}
+        ${detailRow("Phone", booking.passengerPhone)}
+        ${detailRow("Email", booking.passengerEmail)}
+      </table>
+
+      <a href="https://www.luxexride.com/admin/bookings" class="btn">View in Admin Panel</a>
     </div>
   `);
 
   try {
     await resend.emails.send({
-      from: FROM_INFO,
-      replyTo: REPLY_TO,
-      to: [booking.passengerEmail],
-      subject: `Booking ${titleCase(newStatus)} — ${booking.confirmationCode} · LuxEx`,
-      html,
+      from: FROM_BOOKINGS,
+      to: ADMIN_EMAILS,
+      subject: `[${info.subjectVerb.toUpperCase()}] Booking ${booking.confirmationCode} — ${booking.date} ${fmtTime(booking.time)}`,
+      html: adminHtml,
     });
+    logger.info({ status: newStatus, code: booking.confirmationCode }, "[mailer] admin status email sent");
   } catch (err) {
-    logger.error({ err }, "[mailer] Failed to send status update email");
+    logger.error({ err }, "[mailer] Failed to send admin status update email");
   }
 }
 

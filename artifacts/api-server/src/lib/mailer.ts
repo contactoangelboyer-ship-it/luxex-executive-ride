@@ -3,16 +3,12 @@ import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Three sending addresses — each with a clear role
-const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments
-const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
-const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
+const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";
+const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";
+const REPLY_TO      = "contact@luxexride.com";
 
-// Corporate inboxes always notified — fallback when ADMIN_EMAIL_CORPORATE is not set.
 const CORPORATE_ADMIN_EMAILS = ["contact@luxexride.com", "info@luxexride.com", "bookings@luxexride.com"];
 
-// All admin recipients: external (ADMIN_EMAIL) merged with corporate (ADMIN_EMAIL_CORPORATE or defaults).
-// All sent via Resend — fast HTTP delivery that reliably completes in Vercel serverless.
 function buildAdminEmails(): string[] {
   const external = (process.env.ADMIN_EMAIL ?? "").split(",").map(e => e.trim()).filter(Boolean);
   const corpEnv  = (process.env.ADMIN_EMAIL_CORPORATE ?? "").split(",").map(e => e.trim()).filter(Boolean);
@@ -152,6 +148,11 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 
       <div class="section-title">Trip Details</div>
       ${bookingTable(booking)}
+
+      <div class="section-title">Contact Information</div>
+      <table class="details">
+        ${detailRow("Phone on File", `<a href="tel:${booking.passengerPhone}" style="color:#0a0a0a;">${booking.passengerPhone}</a>`)}
+      </table>
 
       <div class="alert alert-info">
         <strong>Need to make changes?</strong><br>
@@ -519,53 +520,21 @@ export async function sendDriverReminder2h(booking: any, driver: { name: string;
 export async function sendPostTripSummary(booking: any): Promise<void> {
   if (!resend || !booking.passengerEmail) return;
 
-  const breakdown = [
-    booking.baseAmount > 0   ? `<div class="price-row"><span>Base fare</span><span>$${Number(booking.baseAmount).toFixed(2)}</span></div>` : "",
-    booking.mileageAmount > 0 ? `<div class="price-row"><span>Mileage</span><span>$${Number(booking.mileageAmount).toFixed(2)}</span></div>` : "",
-    booking.surchargesAmount > 0 ? `<div class="price-row"><span>Surcharges</span><span>$${Number(booking.surchargesAmount).toFixed(2)}</span></div>` : "",
-    booking.tollsAmount > 0  ? `<div class="price-row"><span>Tolls</span><span>$${Number(booking.tollsAmount).toFixed(2)}</span></div>` : "",
-    booking.promoDiscount > 0 ? `<div class="price-row" style="color:#14532d;"><span>Promo (${booking.promoCode})</span><span>-$${Number(booking.promoDiscount).toFixed(2)}</span></div>` : "",
-  ].filter(Boolean).join("");
-
   const html = baseTemplate(`
     <div class="body">
-      <h1>Thank you for riding with us.</h1>
-      <p class="sub"><strong>${booking.passengerName}</strong>, we hope you had an excellent experience with LuxEx Executive Ride.</p>
+      <h1>Thank you for riding with LuxEx.</h1>
+      <p class="sub">We hope your experience was exceptional, <strong>${booking.passengerName}</strong>. Here is a summary of your trip.</p>
 
       <div class="section-title">Trip Summary</div>
-      <table class="details">
-        ${detailRow("Confirmation #", `<strong style="font-family:'Courier New',monospace;letter-spacing:0.1em;">${booking.confirmationCode}</strong>`)}
-        ${detailRow("Date", booking.date)}
-        ${detailRow("Time", fmtTime(booking.time))}
-        ${detailRow("From", booking.pickupAddress)}
-        ${booking.dropoffAddress ? detailRow("To", booking.dropoffAddress) : ""}
-        ${detailRow("Vehicle", titleCase(booking.vehicleType ?? ""))}
-        ${booking.distanceMiles > 0 ? detailRow("Distance", `${Number(booking.distanceMiles).toFixed(1)} miles`) : ""}
-      </table>
+      ${bookingTable(booking)}
 
-      ${breakdown ? `<div class="section-title">Receipt</div>
-      <div style="margin:16px 0;">
-        ${breakdown}
-        <div class="price-total">
-          <span>Total charged (excl. gratuity)</span>
-          <span>$${Number(booking.totalAmount ?? 0).toFixed(2)}</span>
-        </div>
-      </div>` : ""}
+      <div class="stars">★★★★★</div>
+      <p style="font-size:14px;color:#555;margin-top:8px;">We'd love to hear about your experience. Reply to this email with any feedback.</p>
 
-      <div class="section-title">We Value Your Feedback</div>
-      <div style="text-align:center; padding:20px 0;">
-        <div class="stars">★ ★ ★ ★ ★</div>
-        <p style="font-size:14px;color:#555;margin:8px 0 20px;">Your feedback helps us maintain the highest standards of service.</p>
-        <a href="mailto:contact@luxexride.com?subject=Feedback for booking ${booking.confirmationCode}" class="btn">Share Your Feedback</a>
+      <div class="alert alert-success" style="margin-top:24px;">
+        <strong>Book your next ride</strong> at <a href="https://www.luxexride.com" style="color:#14532d;">www.luxexride.com</a>
+        or reply to this email and we'll take care of you.
       </div>
-
-      <div class="alert alert-success">
-        <strong>Book your next ride:</strong><br>
-        Visit <a href="https://www.luxexride.com" style="color:#14532d;">www.luxexride.com</a> to schedule your next trip.
-        As a returning passenger, mention confirmation <strong>${booking.confirmationCode}</strong> for priority service.
-      </div>
-
-      <p class="note">Questions about your trip or receipt? Contact us at <a href="mailto:contact@luxexride.com">contact@luxexride.com</a> — we respond within 24 hours.</p>
     </div>
   `);
 
@@ -574,7 +543,7 @@ export async function sendPostTripSummary(booking: any): Promise<void> {
       from: FROM_INFO,
       replyTo: REPLY_TO,
       to: [booking.passengerEmail],
-      subject: `Trip Completed — Receipt & Summary · ${booking.confirmationCode} · LuxEx`,
+      subject: `Trip Complete — Thank you for riding with LuxEx · ${booking.confirmationCode}`,
       html,
     });
     logger.info({ code: booking.confirmationCode }, "[mailer] post-trip summary sent");

@@ -4,35 +4,56 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Car, CheckCircle, Navigation, Phone, User,
   Calendar, Star, Power, ChevronRight, AlertCircle, MapPin,
-  Briefcase, RefreshCw,
+  Briefcase, RefreshCw, Route, ParkingSquare, PlayCircle,
+  XCircle, AlertTriangle, Loader2,
 } from "lucide-react";
 import { PortalLayout } from "@/components/PortalLayout";
 import { getCurrentUser } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const YELLOW = "#F2E147";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  pending:     { bg: "rgba(251,191,36,0.1)",  text: "#fbbf24", border: "rgba(251,191,36,0.25)" },
-  confirmed:   { bg: "rgba(96,165,250,0.1)",  text: "#60a5fa", border: "rgba(96,165,250,0.25)" },
-  assigned:    { bg: "rgba(167,139,250,0.1)", text: "#a78bfa", border: "rgba(167,139,250,0.25)" },
-  in_progress: { bg: "rgba(52,211,153,0.1)",  text: "#34d399", border: "rgba(52,211,153,0.25)" },
+  pending:     { bg: "rgba(251,191,36,0.1)",   text: "#fbbf24", border: "rgba(251,191,36,0.25)" },
+  confirmed:   { bg: "rgba(96,165,250,0.1)",   text: "#60a5fa", border: "rgba(96,165,250,0.25)" },
+  assigned:    { bg: "rgba(167,139,250,0.1)",  text: "#a78bfa", border: "rgba(167,139,250,0.25)" },
+  en_route:    { bg: "rgba(251,191,36,0.12)",  text: "#fbbf24", border: "rgba(251,191,36,0.3)" },
+  on_site:     { bg: "rgba(52,211,153,0.1)",   text: "#34d399", border: "rgba(52,211,153,0.3)" },
+  in_progress: { bg: "rgba(52,211,153,0.15)",  text: "#34d399", border: "rgba(52,211,153,0.4)" },
   completed:   { bg: "rgba(255,255,255,0.05)", text: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.1)" },
-  cancelled:   { bg: "rgba(248,113,113,0.1)", text: "#f87171", border: "rgba(248,113,113,0.25)" },
+  cancelled:   { bg: "rgba(248,113,113,0.1)",  text: "#f87171", border: "rgba(248,113,113,0.25)" },
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending", confirmed: "Confirmed", assigned: "Assigned",
-  in_progress: "In Progress", completed: "Completed", cancelled: "Cancelled",
+  pending: "Pendiente", confirmed: "Confirmado", assigned: "Asignado",
+  en_route: "En Camino", on_site: "En Sitio",
+  in_progress: "En Progreso", completed: "Completado", cancelled: "Cancelado",
 };
+
+// Next action for each status
+interface RideAction { label: string; nextStatus: string; Icon: React.ElementType; style: React.CSSProperties }
+
+function getRideAction(status: string, yellow: string): RideAction | null {
+  switch (status) {
+    case "assigned":    return { label: "En Camino",         nextStatus: "en_route",    Icon: Route,          style: { background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.4)", color: "#a78bfa" } };
+    case "en_route":    return { label: "Llegué al Sitio",  nextStatus: "on_site",     Icon: ParkingSquare,  style: { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)", color: yellow } };
+    case "on_site":     return { label: "Iniciar Viaje",    nextStatus: "in_progress", Icon: PlayCircle,     style: { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399" } };
+    case "in_progress": return { label: "Completar Viaje", nextStatus: "completed",   Icon: CheckCircle,    style: { background: yellow, border: `1px solid ${yellow}`, color: "#0a0a0a" } };
+    default: return null;
+  }
+}
 
 export default function DriverDashboard() {
   const user = getCurrentUser()!;
-  const [rides, setRides] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const [rides, setRides]           = useState<any[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isOnline, setIsOnline] = useState(() => {
+  const [isOnline, setIsOnline]     = useState(() => {
     return localStorage.getItem(`luxex_driver_online_${user.email}`) !== "offline";
   });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const toggleOnline = () => {
     const next = !isOnline;
@@ -51,18 +72,46 @@ export default function DriverDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  const today = new Date().toISOString().split("T")[0];
-  const todayRides = rides.filter(r => r.date === today);
-  const completed = rides.filter(r => r.status === "completed");
-  const active = rides.filter(r => r.status === "in_progress");
-  const upcoming = rides
-    .filter(r => ["confirmed", "assigned"].includes(r.status) && r.date >= today)
-    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-  const nextRide = upcoming[0] ?? active[0] ?? null;
+  const updateStatus = async (id: number, status: string) => {
+    setActionLoading(true);
+    setShowCancelConfirm(false);
+    try {
+      const res = await fetch(`/api/bookings/${id}/driver-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, status }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: "Error", description: (err as any).error ?? "No se pudo actualizar el estado", variant: "destructive" });
+        return;
+      }
+      const updated = await res.json();
+      setRides(prev => prev.map(r => r.id === id ? updated : r));
+      toast({ title: "Estado actualizado", description: `Viaje: ${STATUS_LABELS[updated.status] ?? updated.status}` });
+    } catch {
+      toast({ title: "Error de red", description: "Verifica tu conexión.", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const navigateTo = (address: string) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, "_blank");
   };
+
+  const today = new Date().toISOString().split("T")[0];
+  const todayRides  = rides.filter(r => r.date === today);
+  const completed   = rides.filter(r => r.status === "completed");
+  const active      = rides.filter(r => ["en_route", "on_site", "in_progress"].includes(r.status));
+  const upcoming    = rides
+    .filter(r => ["confirmed", "assigned"].includes(r.status) && r.date >= today)
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+
+  const activeRide  = active[0] ?? null;
+  const nextRide    = activeRide ?? upcoming[0] ?? null;
+  const rideAction  = nextRide ? getRideAction(nextRide.status, YELLOW) : null;
+  const canCancel   = nextRide ? ["assigned","en_route","on_site","in_progress"].includes(nextRide.status) : false;
 
   return (
     <PortalLayout user={user} onLogout={() => window.location.href = "/"}>
@@ -72,9 +121,9 @@ export default function DriverDashboard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: YELLOW }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              {new Date().toLocaleDateString("es-ES", { weekday: "long", month: "long", day: "numeric" })}
             </p>
-            <h2 className="text-2xl font-black text-white">{user.firstName}&apos;s Dashboard</h2>
+            <h2 className="text-2xl font-black text-white">Dashboard — {user.firstName}</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => load(true)} disabled={refreshing}
@@ -103,34 +152,40 @@ export default function DriverDashboard() {
               style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}>
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-400">You&apos;re offline</p>
+                <p className="text-sm font-bold text-red-400">Estás offline</p>
                 <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  Switch to Online to be visible and receive new ride assignments.
+                  Cámbiate a Online para recibir asignaciones de viajes.
                 </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Next / Active Ride Card */}
+        {/* Active / Next Ride Card */}
         <AnimatePresence>
           {nextRide && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              style={{ background: "rgba(167,139,250,0.07)", border: "1px solid rgba(167,139,250,0.3)" }}>
+              style={{
+                background: activeRide ? "rgba(52,211,153,0.05)" : "rgba(167,139,250,0.07)",
+                border: `1px solid ${activeRide ? "rgba(52,211,153,0.3)" : "rgba(167,139,250,0.3)"}`,
+              }}>
+              {/* Card header */}
               <div className="flex items-center justify-between px-5 py-3"
-                style={{ borderBottom: "1px solid rgba(167,139,250,0.12)" }}>
+                style={{ borderBottom: `1px solid ${activeRide ? "rgba(52,211,153,0.12)" : "rgba(167,139,250,0.12)"}` }}>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#a78bfa" }}>
-                    {nextRide.status === "in_progress" ? "Active — In Progress" : "Next Assigned Ride"}
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${activeRide ? "bg-green-400" : "bg-purple-400"}`} />
+                  <span className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: activeRide ? "#34d399" : "#a78bfa" }}>
+                    {activeRide ? `Viaje Activo — ${STATUS_LABELS[nextRide.status]}` : "Próximo Viaje Asignado"}
                   </span>
                 </div>
-                <span className="font-mono text-[10px]" style={{ color: "rgba(167,139,250,0.5)" }}>
+                <span className="font-mono text-[10px]" style={{ color: activeRide ? "rgba(52,211,153,0.5)" : "rgba(167,139,250,0.5)" }}>
                   {nextRide.confirmationCode}
                 </span>
               </div>
 
               <div className="p-5 space-y-4">
+                {/* Route info */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0 space-y-3">
                     <div className="flex items-start gap-3">
@@ -139,7 +194,7 @@ export default function DriverDashboard() {
                         <div className="w-2 h-2 rounded-full bg-green-400" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Pickup</p>
+                        <p className="text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Recogida</p>
                         <p className="text-sm font-bold text-white">{nextRide.pickupAddress}</p>
                       </div>
                     </div>
@@ -150,7 +205,7 @@ export default function DriverDashboard() {
                           <div className="w-2 h-2 rounded-full" style={{ background: "#f87171" }} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Drop-off</p>
+                          <p className="text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Destino</p>
                           <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{nextRide.dropoffAddress}</p>
                         </div>
                       </div>
@@ -163,9 +218,9 @@ export default function DriverDashboard() {
                   </div>
                 </div>
 
-                {/* Passenger info + actions */}
+                {/* Passenger + navigate */}
                 <div className="flex items-center gap-3 flex-wrap pt-3"
-                  style={{ borderTop: "1px solid rgba(167,139,250,0.12)" }}>
+                  style={{ borderTop: `1px solid ${activeRide ? "rgba(52,211,153,0.1)" : "rgba(167,139,250,0.12)"}` }}>
                   {nextRide.passengerName && (
                     <div className="flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.3)" }} />
@@ -175,35 +230,29 @@ export default function DriverDashboard() {
                   {nextRide.passengerPhone && (
                     <a href={`tel:${nextRide.passengerPhone}`}
                       className="flex items-center gap-1.5 text-xs font-semibold transition-colors"
-                      style={{ color: "#a78bfa" }}>
+                      style={{ color: activeRide ? "#34d399" : "#a78bfa" }}>
                       <Phone className="w-3.5 h-3.5" /> {nextRide.passengerPhone}
                     </a>
                   )}
                   {nextRide.passengers > 1 && (
                     <div className="flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-white/30" />
-                      <span className="text-xs text-white/40">{nextRide.passengers} pax · {nextRide.bags} bags</span>
-                    </div>
-                  )}
-                  {nextRide.vehicleType && (
-                    <div className="flex items-center gap-1.5">
-                      <Car className="w-3.5 h-3.5 text-white/30" />
-                      <span className="text-xs text-white/40 capitalize">{nextRide.vehicleType.replace("_", " ")}</span>
+                      <span className="text-xs text-white/40">{nextRide.passengers} pax · {nextRide.bags} maletas</span>
                     </div>
                   )}
                   <div className="ml-auto flex gap-2">
                     {nextRide.dropoffAddress && (
                       <button onClick={() => navigateTo(nextRide.dropoffAddress)}
                         className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors"
-                        style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
-                        <MapPin className="w-3 h-3" /> Drop-off
+                        style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171" }}>
+                        <MapPin className="w-3 h-3" /> Destino
                       </button>
                     )}
                     <motion.button whileTap={{ scale: 0.97 }}
                       onClick={() => navigateTo(nextRide.pickupAddress)}
                       className="flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-black"
                       style={{ background: YELLOW }}>
-                      <Navigation className="w-3.5 h-3.5" /> Navigate
+                      <Navigation className="w-3.5 h-3.5" /> Recogida
                     </motion.button>
                   </div>
                 </div>
@@ -211,8 +260,81 @@ export default function DriverDashboard() {
                 {nextRide.notes && (
                   <div className="px-3 py-2 text-xs"
                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span className="text-white/30 font-bold uppercase tracking-widest text-[10px]">Notes: </span>
+                    <span className="text-white/30 font-bold uppercase tracking-widest text-[10px]">Notas: </span>
                     <span className="text-white/60 italic">{nextRide.notes}</span>
+                  </div>
+                )}
+
+                {/* ── Status Action Buttons ─────────────────────────────── */}
+                {(rideAction || canCancel) && (
+                  <div className="space-y-2 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+
+                    {/* Cancel confirm */}
+                    <AnimatePresence>
+                      {showCancelConfirm && (
+                        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                          className="flex items-start gap-3 p-3"
+                          style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)" }}>
+                          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-red-400">¿Cancelar este viaje?</p>
+                            <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              Se notificará al pasajero y al administrador.
+                            </p>
+                            <div className="flex gap-2 mt-2.5">
+                              <button
+                                onClick={() => updateStatus(nextRide.id, "cancelled")}
+                                disabled={actionLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                                style={{ background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)", color: "#f87171" }}>
+                                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                                Sí, cancelar
+                              </button>
+                              <button
+                                onClick={() => setShowCancelConfirm(false)}
+                                className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
+                                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                                No, volver
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex gap-2">
+                      {/* Primary action button */}
+                      {rideAction && !showCancelConfirm && (
+                        <motion.button whileTap={{ scale: 0.97 }}
+                          onClick={() => {
+                            if (rideAction.nextStatus === "completed") {
+                              if (!window.confirm("¿Confirmas que el viaje fue completado?")) return;
+                            }
+                            updateStatus(nextRide.id, rideAction.nextStatus);
+                          }}
+                          disabled={actionLoading}
+                          className="flex-1 flex items-center justify-center gap-2 py-3 text-[11px] font-black uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                          style={rideAction.style}>
+                          {actionLoading
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <rideAction.Icon className="w-4 h-4" />
+                          }
+                          {actionLoading ? "Actualizando…" : rideAction.label}
+                        </motion.button>
+                      )}
+
+                      {/* Cancel button */}
+                      {canCancel && !showCancelConfirm && (
+                        <motion.button whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowCancelConfirm(true)}
+                          disabled={actionLoading}
+                          className="flex items-center gap-1.5 px-3 py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40"
+                          style={{ background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.2)", color: "rgba(248,113,113,0.7)" }}>
+                          <XCircle className="w-3.5 h-3.5" />
+                          Cancelar
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -220,12 +342,12 @@ export default function DriverDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Stats Grid — no earnings, rides count only */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: "Today's Rides", value: loading ? "—" : todayRides.length, icon: Car, color: "#fff" },
-            { label: "Completed", value: loading ? "—" : completed.length, icon: CheckCircle, color: "#34d399" },
-            { label: "Total Rides", value: loading ? "—" : rides.length, icon: Briefcase, color: YELLOW },
+            { label: "Hoy", value: loading ? "—" : todayRides.length, icon: Car, color: "#fff" },
+            { label: "Completados", value: loading ? "—" : completed.length, icon: CheckCircle, color: "#34d399" },
+            { label: "Total", value: loading ? "—" : rides.length, icon: Briefcase, color: YELLOW },
           ].map((s, i) => {
             const Icon = s.icon;
             return (
@@ -246,7 +368,7 @@ export default function DriverDashboard() {
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" style={{ color: "rgba(255,255,255,0.3)" }} />
-              <h3 className="font-bold text-sm text-white">Today&apos;s Schedule</h3>
+              <h3 className="font-bold text-sm text-white">Agenda de Hoy</h3>
               {todayRides.length > 0 && (
                 <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5"
                   style={{ background: `${YELLOW}22`, color: YELLOW, border: `1px solid ${YELLOW}44` }}>
@@ -259,7 +381,7 @@ export default function DriverDashboard() {
                 style={{ color: "rgba(255,255,255,0.35)" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = YELLOW; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)"; }}>
-                All rides <ChevronRight className="w-3.5 h-3.5" />
+                Todos los viajes <ChevronRight className="w-3.5 h-3.5" />
               </a>
             </Link>
           </div>
@@ -272,10 +394,8 @@ export default function DriverDashboard() {
           ) : todayRides.length === 0 ? (
             <div className="p-10 text-center">
               <Calendar className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(255,255,255,0.08)" }} />
-              <p className="text-sm font-semibold text-white/50">No rides scheduled today</p>
-              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>
-                Your assignments will appear here.
-              </p>
+              <p className="text-sm font-semibold text-white/50">Sin viajes programados hoy</p>
+              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Tus asignaciones aparecerán aquí.</p>
             </div>
           ) : (
             <div>
@@ -300,7 +420,7 @@ export default function DriverDashboard() {
                       <div className="flex items-center gap-2.5 shrink-0">
                         <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5"
                           style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-                          {STATUS_LABELS[r.status]}
+                          {STATUS_LABELS[r.status] ?? r.status}
                         </span>
                         <button onClick={() => navigateTo(r.pickupAddress)}
                           className="p-1.5 transition-colors"
@@ -315,12 +435,12 @@ export default function DriverDashboard() {
           )}
         </div>
 
-        {/* Summary row */}
+        {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Total Rides", value: rides.length, icon: Briefcase },
-            { label: "Completion Rate", value: rides.length > 0 ? `${Math.round((completed.length / rides.length) * 100)}%` : "—", icon: Star },
-          ].map((s, i) => {
+            { label: "Viajes Totales", value: rides.length, icon: Briefcase },
+            { label: "Tasa de Completados", value: rides.length > 0 ? `${Math.round((completed.length / rides.length) * 100)}%` : "—", icon: Star },
+          ].map((s) => {
             const Icon = s.icon;
             return (
               <div key={s.label} className="p-3 text-center"

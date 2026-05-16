@@ -54,7 +54,7 @@ router.get("/promotions/validate", async (req, res) => {
     if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) { res.status(400).json({ error: "Promo code exhausted" }); return; }
     res.json({ valid: true, type: promo.type, value: promo.value, description: promo.description });
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to validate promo");
     res.status(500).json({ error: "Failed to validate promo" });
   }
 });
@@ -93,7 +93,7 @@ router.get("/bookings/track", async (req, res) => {
       driverPhone,
     });
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to track booking");
     res.status(500).json({ error: "Failed to track booking" });
   }
 });
@@ -106,7 +106,7 @@ router.get("/bookings/passenger", async (req, res) => {
     const result = await db.select().from(bookings).where(eq(bookings.passengerEmail, email));
     res.json(result);
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to load passenger bookings");
     res.json([]);
   }
 });
@@ -121,7 +121,7 @@ router.get("/bookings/driver", async (req, res) => {
     const result = await db.select().from(bookings).where(eq(bookings.driverId, driver.id));
     res.json(result);
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to load driver bookings");
     res.json([]);
   }
 });
@@ -133,7 +133,7 @@ router.get("/bookings/confirm/:code", async (req, res) => {
     if (!booking) { res.status(404).json({ error: "Not found" }); return; }
     res.json(booking);
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to get booking by confirmation code");
     res.status(500).json({ error: "Failed" });
   }
 });
@@ -156,7 +156,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 
     sendStatusUpdate(updated, "cancelled").catch((err) => logger.error({ err }, "[mailer] cancellation email failed"));
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to cancel booking");
     res.status(500).json({ error: "Failed to cancel booking" });
   }
 });
@@ -188,7 +188,7 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
       sendStatusUpdate(updated, status).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
     }
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to update driver status");
     res.status(500).json({ error: "Failed to update status" });
   }
 });
@@ -231,7 +231,7 @@ router.post("/bookings", async (req, res) => {
     sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed"));
     sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed"));
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to create booking");
     res.status(500).json({ error: "Failed to create booking" });
   }
 });

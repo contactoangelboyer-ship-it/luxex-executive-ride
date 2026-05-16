@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
+import { logger } from "../lib/logger";
 import {
   GetMeResponse,
   UpdateMeBody,
@@ -37,7 +38,7 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
   if (!user) {
     const { getAuth } = await import("@clerk/express");
     const auth = getAuth(req);
-    req.log.info({ clerkId, auth }, "Creating user from Clerk session");
+    logger.info({ clerkId, auth }, "Creating user from Clerk session");
     const [created] = await db.insert(usersTable).values({
       clerkId,
       firstName: "User",

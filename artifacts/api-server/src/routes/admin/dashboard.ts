@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { bookings, drivers, vehicles } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
       recentBookings,
     });
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to load dashboard");
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 });

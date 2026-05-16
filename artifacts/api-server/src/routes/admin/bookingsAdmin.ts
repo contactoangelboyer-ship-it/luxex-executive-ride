@@ -10,6 +10,7 @@ import {
   sendAdminNotification,
   sendPostTripSummary,
 } from "../../lib/mailer";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get("/bookings", requireAdmin, async (req, res) => {
     const data = await query.orderBy(desc(bookings.createdAt)).limit(Number(limit)).offset(Number(offset));
     res.json(data);
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to list bookings");
     res.status(500).json({ error: "Failed to list bookings" });
   }
 });
@@ -36,7 +37,7 @@ router.get("/bookings/:id", requireAdmin, async (req, res) => {
     if (!booking) { res.status(404).json({ error: "Not found" }); return; }
     res.json(booking);
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to get booking");
     res.status(500).json({ error: "Failed" });
   }
 });
@@ -76,7 +77,7 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
       }
     }
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to update booking");
     res.status(500).json({ error: "Failed to update booking" });
   }
 });
@@ -102,7 +103,7 @@ router.post("/bookings", requireAdmin, async (req, res) => {
       }
     }
   } catch (err) {
-    req.log.error(err);
+    logger.error({ err }, "Failed to create booking (admin)");
     res.status(500).json({ error: "Failed to create booking" });
   }
 });

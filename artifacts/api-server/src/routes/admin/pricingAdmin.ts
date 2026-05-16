@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { pricingConfig } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
+import { logger } from "../../lib/logger";
 
 const DEFAULT_PRICING = [
   { vehicleType: "sedan",  baseRate: 75,  perMile: 3.75, hourlyRate: 90,  minMiles: 15, airportFee: 45, afterHoursPct: 25, weekendPct: 15 },
@@ -23,7 +24,7 @@ router.get("/pricing", requireAdmin, async (req, res) => {
     } else {
       res.json(data);
     }
-  } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed" }); }
+  } catch (err) { logger.error({ err }, "Failed to get pricing"); res.status(500).json({ error: "Failed" }); }
 });
 
 router.patch("/pricing/:vehicleType", requireAdmin, async (req, res) => {
@@ -35,7 +36,7 @@ router.patch("/pricing/:vehicleType", requireAdmin, async (req, res) => {
       .returning();
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }
     res.json(updated);
-  } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed" }); }
+  } catch (err) { logger.error({ err }, "Failed to update pricing"); res.status(500).json({ error: "Failed" }); }
 });
 
 export default router;

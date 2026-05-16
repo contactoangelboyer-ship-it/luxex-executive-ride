@@ -1,0 +1,36 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Deploy to Vercel (production)
+        run: |
+          cd artifacts/api-server
+          npx vercel deploy --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --build-env NODE_ENV=production
+        env:
+          VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
+          VERCEL_PROJECT_ID: prj_6yj35u6kmMrF1TeOUI4XluSa0QTB
+

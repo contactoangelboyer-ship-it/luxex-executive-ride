@@ -3,6 +3,7 @@ import { db, bookingsTable, pricingConfigsTable } from "@workspace/db";
 import { vehicles, zones, promotions, bookings, adminDrivers } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { sendCustomerConfirmation, sendAdminNotification } from "../lib/mailer";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -174,8 +175,8 @@ router.post("/bookings", async (req, res) => {
     res.status(201).json(booking);
 
     // Fire-and-forget emails — never block the booking response
-    sendCustomerConfirmation(booking).catch(() => {});
-    sendAdminNotification(booking).catch(() => {});
+    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (public)"));
+    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (public)"));
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to create booking" });
   }

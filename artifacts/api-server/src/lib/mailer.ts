@@ -1,57 +1,24 @@
 import { Resend } from "resend";
-import nodemailer from "nodemailer";
 import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Sending addresses — each with a clear role
+// Three sending addresses — each with a clear role
 const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments
 const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
 const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
 
-// SMTP transporter for Namecheap Private Email — optional extra delivery path.
-// NOTE: In Vercel serverless, SMTP is unreliable as a fire-and-forget operation
-// because the TCP handshake + auth takes 1-3s and the function may be killed
-// after the HTTP response is sent. Resend (HTTP) is always used as primary path.
-function getSmtpTransport() {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!user || !pass) return null;
-  return nodemailer.createTransport({
-    host: "mail.privateemail.com",
-    port: 587,
-    secure: false,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
-  });
-}
+// Corporate inboxes always notified — fallback when ADMIN_EMAIL_CORPORATE is not set.
+const CORPORATE_ADMIN_EMAILS = ["contact@luxexride.com", "info@luxexride.com", "bookings@luxexride.com"];
 
-// Primary corporate admin inboxes — always notified via Resend.
-// Resend is authorized to send FROM @luxexride.com (SPF/DKIM configured),
-// so it can also deliver TO @luxexride.com inboxes on Namecheap.
-const CORPORATE_ADMIN_EMAILS_DEFAULT = [
-  "contact@luxexride.com",
-  "info@luxexride.com",
-  "bookings@luxexride.com",
-];
-
-// All admin recipients for Resend: external (ADMIN_EMAIL) + corporate (ADMIN_EMAIL_CORPORATE or defaults).
-// Using Resend for all ensures fast HTTP delivery that completes in serverless environments.
-function getAllAdminEmailsForResend(): string[] {
-  const external = (process.env.ADMIN_EMAIL ?? "")
-    .split(",").map(e => e.trim()).filter(Boolean);
-  const corporateEnv = (process.env.ADMIN_EMAIL_CORPORATE ?? "")
-    .split(",").map(e => e.trim()).filter(Boolean);
-  const corporate = corporateEnv.length > 0 ? corporateEnv : CORPORATE_ADMIN_EMAILS_DEFAULT;
-  return [...new Set([...external, ...corporate])];
+// All admin recipients: external (ADMIN_EMAIL) merged with corporate (ADMIN_EMAIL_CORPORATE or defaults).
+// All sent via Resend — fast HTTP delivery that reliably completes in Vercel serverless.
+function buildAdminEmails(): string[] {
+  const external = (process.env.ADMIN_EMAIL ?? "").split(",").map(e => e.trim()).filter(Boolean);
+  const corpEnv  = (process.env.ADMIN_EMAIL_CORPORATE ?? "").split(",").map(e => e.trim()).filter(Boolean);
+  return [...new Set([...external, ...(corpEnv.length ? corpEnv : CORPORATE_ADMIN_EMAILS)])];
 }
-
-// SMTP recipients (optional extra path, corporate only).
-function getSmtpAdminEmails(): string[] {
-  const fromEnv = (process.env.ADMIN_EMAIL_CORPORATE ?? "")
-    .split(",").map(e => e.trim()).filter(Boolean);
-  return fromEnv.length > 0 ? fromEnv : CORPORATE_ADMIN_EMAILS_DEFAULT;
-}
+const ADMIN_EMAILS: string[] = buildAdminEmails();
 
 function fmtTime(t: string): string {
   if (!t) return t ?? "";
@@ -214,7 +181,10 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 // ── Admin New Booking Notification ───────────────────────────────────────────
 
 export async function sendAdminNotification(booking: any): Promise<void> {
-  const subject = `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`;
+  if (!resend) {
+    logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
+    return;
+  }
 
   const html = baseTemplate(`
     <div class="body">
@@ -239,57 +209,18 @@ export async function sendAdminNotification(booking: any): Promise<void> {
     </div>
   `);
 
-  const sends: Promise<void>[] = [];
-
-  // Primary path: Resend → ALL admin recipients (external + corporate).
-  // Resend is a fast HTTP API call that reliably completes in Vercel serverless
-  // before the function is recycled. Corporate @luxexride.com addresses are
-  // included here because Resend is already authorized (SPF/DKIM) to send
-  // FROM @luxexride.com, so Namecheap's inbound MX accepts delivery TO @luxexride.com.
-  const allResendEmails = getAllAdminEmailsForResend();
-  if (resend && allResendEmails.length > 0) {
-    sends.push(
-      resend.emails.send({
-        from: FROM_INFO,
-        to: allResendEmails,
-        subject,
-        html,
-      }).then((result) => {
-        logger.info({ id: result.data?.id, to: allResendEmails }, "[mailer] admin notification sent via Resend");
-      }).catch((err) => {
-        logger.error({ err, to: allResendEmails }, "[mailer] Resend admin notification failed");
-      })
-    );
-  } else if (!resend) {
-    logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
+  try {
+    const result = await resend.emails.send({
+      from: FROM_BOOKINGS,
+      to: ADMIN_EMAILS,
+      subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
+      html,
+    });
+    logger.info({ id: result.data?.id, to: ADMIN_EMAILS }, "[mailer] admin notification sent");
+  } catch (err) {
+    logger.error({ err }, "[mailer] Failed to send admin notification");
+    throw err;
   }
-
-  // Optional extra path: SMTP → corporate @luxexride.com (belt-and-suspenders).
-  // Only fires if SMTP credentials are configured. Not relied upon as primary
-  // because SMTP TCP connections are slow and unreliable in serverless cold starts.
-  const smtpEmails = getSmtpAdminEmails();
-  const smtp = getSmtpTransport();
-  if (smtp && smtpEmails.length > 0) {
-    sends.push(
-      smtp.sendMail({
-        from: `"LuxEx Notifications" <${process.env.SMTP_USER}>`,
-        to: smtpEmails.join(", "),
-        subject,
-        html,
-      }).then((info) => {
-        logger.info({ messageId: info.messageId, to: smtpEmails }, "[mailer] admin notification also sent via SMTP");
-      }).catch((err) => {
-        logger.warn({ err: String(err), to: smtpEmails }, "[mailer] SMTP admin notification failed (non-critical, Resend is primary)");
-      })
-    );
-  }
-
-  if (sends.length === 0) {
-    logger.warn("[mailer] No admin recipients configured — skipping admin notification");
-    return;
-  }
-
-  await Promise.all(sends);
 }
 
 // ── Driver Assignment Notification (NO price info) ───────────────────────────

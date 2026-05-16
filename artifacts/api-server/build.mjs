@@ -71,7 +71,9 @@ import { createRequire } from "node:module";
       format: "esm",
       outfile: path.resolve(funcDir, "index.mjs"),
       logLevel: "info",
-      external: [...EXTERNALS, ...SERVERLESS_EXTRA_EXTERNALS, "pino-pretty", "thread-stream", "node-cron"],
+      // Replace pino with a console.log stub — pino's worker-thread internals can crash Vercel Node.js 22
+        alias: { "pino": path.resolve(artifactDir, "src/lib/pino-stub.js") },
+        external: [...EXTERNALS, ...SERVERLESS_EXTRA_EXTERNALS, "pino-pretty", "thread-stream", "node-cron"],
       sourcemap: false,
       banner: BANNER,
     });

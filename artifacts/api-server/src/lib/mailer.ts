@@ -3,9 +3,10 @@ import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Three sending addresses — each with a clear role
+// Sending addresses — each with a clear role
 const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments
 const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
+const FROM_ADMIN    = "LuxEx Notifications <info@luxexride.com>";    // admin notifications — uses info@ to avoid same-domain Namecheap block
 const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
 
 function getAdminEmails(): string[] {
@@ -205,7 +206,7 @@ export async function sendAdminNotification(booking: any): Promise<void> {
   const adminEmails = getAdminEmails();
   try {
     const result = await resend.emails.send({
-      from: FROM_BOOKINGS,
+      from: FROM_ADMIN,
       to: adminEmails,
       subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
       html,

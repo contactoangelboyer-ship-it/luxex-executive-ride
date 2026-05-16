@@ -2,7 +2,6 @@ import { Resend } from "resend";
 import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-logger.info({ hasKey: !!process.env.RESEND_API_KEY }, "[mailer] Resend initialized");
 
 // Three sending addresses — each with a clear role
 const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments

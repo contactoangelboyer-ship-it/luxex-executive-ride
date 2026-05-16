@@ -13,6 +13,9 @@ export const adminDrivers = pgTable("admin_drivers", {
   rating: doublePrecision("rating").default(5.0),
   totalTrips: integer("total_trips").default(0),
   notes: text("notes"),
+  verificationStatus: varchar("verification_status", { length: 30 }).notNull().default("pending"),
+  accessPin: varchar("access_pin", { length: 10 }),
+  pinGeneratedAt: timestamp("pin_generated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

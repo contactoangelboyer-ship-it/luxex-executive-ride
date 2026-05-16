@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { logger } from "./logger";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -6,11 +7,33 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 // Sending addresses — each with a clear role
 const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";    // confirmations, reminders, driver assignments
 const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";   // status updates, cancellations, general comms
-const FROM_ADMIN    = "LuxEx Notifications <info@luxexride.com>";    // admin notifications — uses info@ to avoid same-domain Namecheap block
 const REPLY_TO      = "contact@luxexride.com";                       // passengers reply here
 
-function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAIL ?? "bookings@luxexride.com")
+// SMTP transporter for Namecheap Private Email — used to reliably deliver
+// to corporate @luxexride.com addresses that Resend cannot reach due to
+// same-domain restrictions imposed by Namecheap mail servers.
+function getSmtpTransport() {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    host: "mail.privateemail.com",
+    port: 587,
+    secure: false,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
+  });
+}
+
+// Resend recipients: external addresses (e.g. Gmail) that accept Resend delivery
+function getResendAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAIL ?? "")
+    .split(",").map(e => e.trim()).filter(Boolean);
+}
+
+// SMTP recipients: corporate @luxexride.com addresses sent via Namecheap SMTP
+function getSmtpAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAIL_CORPORATE ?? "")
     .split(",").map(e => e.trim()).filter(Boolean);
 }
 
@@ -175,10 +198,7 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
 // ── Admin New Booking Notification ───────────────────────────────────────────
 
 export async function sendAdminNotification(booking: any): Promise<void> {
-  if (!resend) {
-    logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
-    return;
-  }
+  const subject = `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`;
 
   const html = baseTemplate(`
     <div class="body">
@@ -203,19 +223,53 @@ export async function sendAdminNotification(booking: any): Promise<void> {
     </div>
   `);
 
-  const adminEmails = getAdminEmails();
-  try {
-    const result = await resend.emails.send({
-      from: FROM_ADMIN,
-      to: adminEmails,
-      subject: `New Booking #${booking.confirmationCode} — ${booking.date} at ${fmtTime(booking.time)}`,
-      html,
-    });
-    logger.info({ id: result.data?.id, to: adminEmails }, "[mailer] admin notification sent");
-  } catch (err) {
-    logger.error({ err }, "[mailer] Failed to send admin notification");
-    throw err;
+  const sends: Promise<void>[] = [];
+
+  // Path 1: Resend → external recipients (Gmail, etc.)
+  const resendEmails = getResendAdminEmails();
+  if (resend && resendEmails.length > 0) {
+    sends.push(
+      resend.emails.send({
+        from: FROM_INFO,
+        to: resendEmails,
+        subject,
+        html,
+      }).then((result) => {
+        logger.info({ id: result.data?.id, to: resendEmails }, "[mailer] admin notification sent via Resend");
+      }).catch((err) => {
+        logger.error({ err, to: resendEmails }, "[mailer] Resend admin notification failed");
+      })
+    );
+  } else if (resendEmails.length > 0) {
+    logger.warn("[mailer] RESEND_API_KEY not configured — skipping Resend admin email");
   }
+
+  // Path 2: SMTP → corporate @luxexride.com recipients via Namecheap
+  const smtpEmails = getSmtpAdminEmails();
+  const smtp = getSmtpTransport();
+  if (smtp && smtpEmails.length > 0) {
+    sends.push(
+      smtp.sendMail({
+        from: `"LuxEx Notifications" <${process.env.SMTP_USER}>`,
+        to: smtpEmails.join(", "),
+        subject,
+        html,
+      }).then((info) => {
+        logger.info({ messageId: info.messageId, to: smtpEmails }, "[mailer] admin notification sent via SMTP");
+      }).catch((err) => {
+        logger.error({ err, to: smtpEmails }, "[mailer] SMTP admin notification failed");
+      })
+    );
+  } else if (smtpEmails.length > 0) {
+    logger.warn("[mailer] SMTP_USER/SMTP_PASS not configured — skipping corporate admin email");
+  }
+
+  if (sends.length === 0) {
+    logger.warn("[mailer] No admin recipients configured — skipping admin notification");
+    return;
+  }
+
+  await Promise.all(sends);
 }
 
 // ── Driver Assignment Notification (NO price info) ───────────────────────────

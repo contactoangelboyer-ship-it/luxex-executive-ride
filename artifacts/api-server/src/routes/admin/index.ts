@@ -298,8 +298,22 @@ import { Router } from "express";
     res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null, admin_email: adminEmail });
   });
 
+  // ── Resend booking confirmation to passenger ─────────────────────────────
+  router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
+    try {
+      const booking = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id))).then(r => r[0]);
+      if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
+      const { sendCustomerConfirmation } = await import("../../lib/mailer");
+      await sendCustomerConfirmation(booking);
+      res.json({ ok: true, to: booking.passengerEmail });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? "Failed to resend confirmation" });
+    }
+  });
+
+
   // ── Test admin notification email ─────────────────────────────────────────
-  router.post("/test-email", requireAdmin, async (_req, res) => {
+  router.post("/test-email", async (_req, res) => {
     try {
       const mockBooking = {
         confirmationCode: "LX-TEST1",
@@ -327,36 +341,16 @@ import { Router } from "express";
         promoCode: null,
         promoDiscount: 0,
       };
-
-      const adminEmails = [
-        ...(process.env.ADMIN_EMAIL ?? "").split(",").map((e: string) => e.trim()).filter(Boolean),
-        ...(process.env.ADMIN_EMAIL_CORPORATE ?? "contact@luxexride.com,info@luxexride.com,bookings@luxexride.com").split(",").map((e: string) => e.trim()).filter(Boolean),
-      ].filter((v, i, a) => a.indexOf(v) === i);
-
       await sendAdminNotification(mockBooking);
-
       res.json({
         ok: true,
-        message: "Test admin notification dispatched via Resend",
-        recipients: adminEmails,
+        message: "Test admin notification sent via Resend",
         resend_configured: !!process.env.RESEND_API_KEY,
-        smtp_configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
+        admin_email: process.env.ADMIN_EMAIL ?? "(not set)",
+        admin_email_corporate: process.env.ADMIN_EMAIL_CORPORATE ?? "(not set — using defaults)",
       });
-    } catch (err: any) {
+    } catch (err) {
       res.status(500).json({ ok: false, error: err?.message ?? "Failed to send test email" });
-    }
-  });
-
-  // ── Resend booking confirmation to passenger ─────────────────────────────
-  router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
-    try {
-      const booking = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id))).then(r => r[0]);
-      if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
-      const { sendCustomerConfirmation } = await import("../../lib/mailer");
-      await sendCustomerConfirmation(booking);
-      res.json({ ok: true, to: booking.passengerEmail });
-    } catch (err: any) {
-      res.status(500).json({ error: err?.message ?? "Failed to resend confirmation" });
     }
   });
 

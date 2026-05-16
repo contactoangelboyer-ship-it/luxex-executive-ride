@@ -294,7 +294,8 @@ import { Router } from "express";
   // ── Email diagnostic ─────────────────────────────────────────────────────
   router.get("/email-status", requireAdmin, async (_req, res) => {
     const hasKey = !!process.env.RESEND_API_KEY;
-    res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null });
+    const adminEmail = process.env.ADMIN_EMAIL ?? "bookings@luxexride.com";
+    res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null, admin_email: adminEmail });
   });
 
   // ── Resend booking confirmation to passenger ─────────────────────────────

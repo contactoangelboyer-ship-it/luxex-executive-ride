@@ -298,6 +298,55 @@ import { Router } from "express";
     res.json({ resend_configured: hasKey, key_prefix: hasKey ? process.env.RESEND_API_KEY!.slice(0, 8) + "..." : null, admin_email: adminEmail });
   });
 
+  // ── Test admin notification email ─────────────────────────────────────────
+  router.post("/test-email", requireAdmin, async (_req, res) => {
+    try {
+      const mockBooking = {
+        confirmationCode: "LX-TEST1",
+        service: "corporate",
+        date: new Date().toISOString().slice(0, 10),
+        time: "14:00",
+        pickupAddress: "123 Test Ave, Miami, FL",
+        dropoffAddress: "Miami International Airport (MIA)",
+        vehicleType: "sedan",
+        passengers: 2,
+        flightNumber: null,
+        flightType: null,
+        meetAndGreet: false,
+        childSeat: false,
+        notes: "This is a test email — no action required.",
+        passengerName: "Test Passenger",
+        passengerPhone: "+1 (305) 000-0000",
+        passengerEmail: process.env.ADMIN_EMAIL ?? "contact@luxexride.com",
+        baseAmount: 95,
+        mileageAmount: 25,
+        surchargesAmount: 10,
+        tollsAmount: 0,
+        totalAmount: 130,
+        distanceMiles: 8.5,
+        promoCode: null,
+        promoDiscount: 0,
+      };
+
+      const adminEmails = [
+        ...(process.env.ADMIN_EMAIL ?? "").split(",").map((e: string) => e.trim()).filter(Boolean),
+        ...(process.env.ADMIN_EMAIL_CORPORATE ?? "contact@luxexride.com,info@luxexride.com,bookings@luxexride.com").split(",").map((e: string) => e.trim()).filter(Boolean),
+      ].filter((v, i, a) => a.indexOf(v) === i);
+
+      await sendAdminNotification(mockBooking);
+
+      res.json({
+        ok: true,
+        message: "Test admin notification dispatched via Resend",
+        recipients: adminEmails,
+        resend_configured: !!process.env.RESEND_API_KEY,
+        smtp_configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
+      });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err?.message ?? "Failed to send test email" });
+    }
+  });
+
   // ── Resend booking confirmation to passenger ─────────────────────────────
   router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
     try {

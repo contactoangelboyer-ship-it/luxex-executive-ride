@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
   import { motion, AnimatePresence } from "framer-motion";
-  import { Plus, Edit2, Trash2, X, Loader2, Star, Key, RefreshCw, Eye, EyeOff, Copy, Check, ShieldCheck, ShieldX, ShieldAlert, Camera, User } from "lucide-react";
+  import { Plus, Edit2, Trash2, X, Loader2, Star, Key, RefreshCw, Eye, EyeOff, Copy, Check, ShieldCheck, ShieldX, ShieldAlert, Camera, User, Share2, MessageCircle, Mail } from "lucide-react";
   import { AdminLayout } from "@/components/AdminLayout";
   import { adminApi } from "@/lib/adminApi";
 
@@ -47,6 +47,7 @@ import { useEffect, useRef, useState } from "react";
     const [pinSaving, setPinSaving]       = useState(false);
     const [pinError, setPinError]         = useState("");
     const [copied, setCopied]             = useState(false);
+    const [msgCopied, setMsgCopied]       = useState(false);
     const [verifyBusy, setVerifyBusy]     = useState<number | null>(null);
 
     const [photoDriver, setPhotoDriver]   = useState<any | null>(null);
@@ -152,6 +153,30 @@ import { useEffect, useRef, useState } from "react";
       await navigator.clipboard.writeText(pinDriver.accessPin);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    };
+
+    const buildShareMessage = (driver: any): string => {
+      return `Hola ${driver.name},\n\nAquí están tus datos de acceso a *Luxex Executive Ride*:\n\n🔑 PIN de acceso: *${driver.accessPin}*\n\nPara ingresar:\n1. Ve a https://luxexride.com/login\n2. Elige "Driver — Login with PIN"\n3. Ingresa tu PIN\n\nSi tienes dudas, contacta al administrador.`;
+    };
+
+    const copyShareMessage = async () => {
+      if (!pinDriver?.accessPin) return;
+      await navigator.clipboard.writeText(buildShareMessage(pinDriver));
+      setMsgCopied(true);
+      setTimeout(() => setMsgCopied(false), 2500);
+    };
+
+    const shareViaWhatsApp = () => {
+      if (!pinDriver?.accessPin) return;
+      const msg = encodeURIComponent(buildShareMessage(pinDriver));
+      window.open(`https://wa.me/?text=${msg}`, "_blank");
+    };
+
+    const shareViaEmail = () => {
+      if (!pinDriver?.accessPin) return;
+      const subject = encodeURIComponent("Tus datos de acceso — Luxex Executive Ride");
+      const body = encodeURIComponent(buildShareMessage(pinDriver).replace(/\*/g, ""));
+      window.open(`mailto:${pinDriver.email ?? ""}?subject=${subject}&body=${body}`, "_blank");
     };
 
     const handleVerify = async (id: number, status: "verified" | "rejected" | "pending") => {
@@ -578,6 +603,43 @@ import { useEffect, useRef, useState } from "react";
 
                     {pinError && <p className="text-xs text-red-400/80 bg-red-400/5 border border-red-400/10 px-3 py-2 mt-3">{pinError}</p>}
                   </div>
+
+                  {pinDriver.accessPin && (
+                    <div className="border-t border-white/[0.04] pt-4 space-y-3">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 flex items-center gap-1.5">
+                        <Share2 className="w-3 h-3" /> Compartir Acceso
+                      </p>
+                      <div className="bg-white/[0.02] border border-white/[0.05] p-3 text-[11px] text-white/40 leading-relaxed font-mono whitespace-pre-line">
+                        {`Hola ${pinDriver.name},\nPIN de acceso: ${pinVisible ? pinDriver.accessPin : "•".repeat(pinDriver.accessPin.length)}\nURL: https://luxexride.com/login`}
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={copyShareMessage}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black tracking-widest uppercase border transition-colors"
+                          style={msgCopied
+                            ? { borderColor: "rgba(52,211,153,0.4)", color: "#34d399", background: "rgba(52,211,153,0.08)" }
+                            : { borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", background: "transparent" }}
+                          onMouseEnter={e => { if (!msgCopied) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLElement).style.color = "#fff"; } }}
+                          onMouseLeave={e => { if (!msgCopied) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.5)"; } }}>
+                          {msgCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {msgCopied ? "Copiado!" : "Copiar mensaje"}
+                        </button>
+                        <button type="button" onClick={shareViaWhatsApp} title="Compartir por WhatsApp"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black tracking-widest uppercase border transition-colors"
+                          style={{ borderColor: "rgba(37,211,102,0.3)", color: "rgba(37,211,102,0.8)", background: "rgba(37,211,102,0.05)" }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(37,211,102,0.12)"; (e.currentTarget as HTMLElement).style.color = "#25D366"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(37,211,102,0.05)"; (e.currentTarget as HTMLElement).style.color = "rgba(37,211,102,0.8)"; }}>
+                          <MessageCircle className="w-3 h-3" /> WA
+                        </button>
+                        <button type="button" onClick={shareViaEmail} title="Compartir por Email"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black tracking-widest uppercase border transition-colors"
+                          style={{ borderColor: "rgba(96,165,250,0.25)", color: "rgba(96,165,250,0.7)", background: "rgba(96,165,250,0.05)" }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(96,165,250,0.12)"; (e.currentTarget as HTMLElement).style.color = "#60a5fa"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(96,165,250,0.05)"; (e.currentTarget as HTMLElement).style.color = "rgba(96,165,250,0.7)"; }}>
+                          <Mail className="w-3 h-3" /> Email
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>

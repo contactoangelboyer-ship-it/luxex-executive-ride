@@ -73,6 +73,17 @@ export function loginUser(email: string, password: string): AuthUser {
   return authUser;
 }
 
+export async function loginWithPin(pin: string): Promise<AuthUser> {
+  const res = await fetch("/api/drivers/pin-login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "PIN incorrecto.");
+  return data as AuthUser;
+}
+
 export function getCurrentUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

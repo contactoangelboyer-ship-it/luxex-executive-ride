@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Loader2, ArrowLeft, Car, User, ChevronRight } from "lucide-react";
-import { registerUser, loginUser, setCurrentUser, type UserRole } from "@/hooks/useAuth";
+import { Eye, EyeOff, Loader2, ArrowLeft, Car, User, ChevronRight, KeyRound, Mail } from "lucide-react";
+import { registerUser, loginUser, loginWithPin, setCurrentUser, type UserRole } from "@/hooks/useAuth";
 
-type Mode = "select" | "login" | "register";
+type Mode = "select" | "login" | "register" | "pin-login";
 
 const LOGO = "https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png";
 const YELLOW = "#F2E147";
@@ -23,6 +23,8 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
     firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "",
   });
 
+  const [pin, setPin] = useState("");
+
   const set = (k: string, v: string) => { setForm(p => ({ ...p, [k]: v })); setError(""); };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,6 +36,24 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
       navigate(user.role === "driver" ? "/driver/dashboard" : "/passenger/dashboard");
     } catch (err: any) {
       setError(err.message);
+    } finally { setLoading(false); }
+  };
+
+  const handlePinLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    try {
+      const cleanPin = pin.replace(/\s/g, "");
+      if (!/^\d{4,10}$/.test(cleanPin)) {
+        setError("El PIN debe tener entre 4 y 10 dígitos.");
+        setLoading(false);
+        return;
+      }
+      const user = await loginWithPin(cleanPin);
+      setCurrentUser(user);
+      navigate("/driver/dashboard");
+    } catch (err: any) {
+      setError(err.message ?? "PIN incorrecto. Contacta a tu administrador.");
     } finally { setLoading(false); }
   };
 
@@ -51,6 +71,8 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
       setError(err.message);
     } finally { setLoading(false); }
   };
+
+  const goBack = () => { setMode("select"); setError(""); setPin(""); };
 
   return (
     <div className="min-h-screen flex" style={{ fontFamily: "'DM Sans', sans-serif", background: BG }}>
@@ -101,7 +123,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
             <img src={LOGO} alt="Luxex" className="h-28 w-auto object-contain" />
           </a>
           {mode !== "select" && (
-            <button onClick={() => { setMode("select"); setError(""); }}
+            <button onClick={goBack}
               className="flex items-center gap-1 text-sm font-semibold hover:text-white transition-colors" style={{ color: "rgba(255,255,255,0.7)" }}>
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
@@ -111,7 +133,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
         {/* Desktop back */}
         {mode !== "select" && (
           <div className="hidden lg:flex px-12 pt-10">
-            <button onClick={() => { setMode("select"); setError(""); }}
+            <button onClick={goBack}
               className="flex items-center gap-1.5 text-sm font-semibold hover:text-white transition-colors" style={{ color: "rgba(255,255,255,0.65)" }}>
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
@@ -144,6 +166,13 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                       subtitle="Manage rides and your schedule"
                       onClick={() => { setRole("driver"); setMode("login"); }}
                     />
+                    <RoleCard
+                      icon={<KeyRound className="w-5 h-5" />}
+                      title="Driver — Login with PIN"
+                      subtitle="Access with the PIN assigned by your admin"
+                      onClick={() => { setRole("driver"); setMode("pin-login"); }}
+                      accent
+                    />
                   </div>
 
                   <div className="flex items-center gap-3 mb-8">
@@ -163,7 +192,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                 </motion.div>
               )}
 
-              {/* ── Login ── */}
+              {/* ── Login (email + password) ── */}
               {mode === "login" && (
                 <motion.div key="login" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
@@ -194,6 +223,25 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                     <YellowBtn loading={loading} label="Sign In" />
                   </form>
 
+                  {role === "driver" && (
+                    <div className="mt-5">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                        <span className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>or</span>
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                      </div>
+                      <button type="button"
+                        onClick={() => { setMode("pin-login"); setError(""); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold tracking-wide transition-all"
+                        style={{ background: "rgba(242,225,71,0.06)", border: "1px solid rgba(242,225,71,0.2)", color: YELLOW }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.1)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.06)"; }}>
+                        <KeyRound className="w-4 h-4" />
+                        Ingresar con PIN
+                      </button>
+                    </div>
+                  )}
+
                   <p className="text-center text-sm mt-6" style={{ color: "rgba(255,255,255,0.65)" }}>
                     No account?{" "}
                     <button onClick={() => setMode("register")}
@@ -201,6 +249,82 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                       style={{ color: YELLOW }}>
                       Register
                     </button>
+                  </p>
+                </motion.div>
+              )}
+
+              {/* ── PIN Login ── */}
+              {mode === "pin-login" && (
+                <motion.div key="pin-login" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                      style={{ background: YELLOW }}>
+                      <KeyRound className="w-[18px] h-[18px] text-black" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-black text-white tracking-tight">Acceso con PIN</h1>
+                      <p className="text-xs tracking-wide" style={{ color: "rgba(255,255,255,0.65)" }}>Ingresa el PIN asignado por tu administrador</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handlePinLogin} className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-bold tracking-wider uppercase mb-1.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                        PIN de acceso
+                      </label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
+                        value={pin}
+                        onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }}
+                        placeholder="••••••"
+                        required
+                        autoComplete="one-time-code"
+                        className="w-full px-4 py-3 text-2xl text-white font-mono tracking-[0.5em] text-center placeholder-white/20 outline-none transition-all duration-200"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 0,
+                          letterSpacing: pin ? "0.5em" : undefined,
+                        }}
+                        onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(242,225,71,0.04)"; }}
+                        onBlur={e => { (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; (e.target as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+                      />
+                      <p className="mt-1.5 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        Solo números · 4 a 10 dígitos
+                      </p>
+                    </div>
+
+                    <AnimatePresence>
+                      {error && <ErrorMsg msg={error} />}
+                    </AnimatePresence>
+
+                    <YellowBtn loading={loading} label="Ingresar" />
+                  </form>
+
+                  <div className="mt-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-1 h-px bg-white/[0.06]" />
+                      <span className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>o también</span>
+                      <div className="flex-1 h-px bg-white/[0.06]" />
+                    </div>
+                    <button type="button"
+                      onClick={() => { setMode("login"); setRole("driver"); setError(""); setPin(""); }}
+                      className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold tracking-wide transition-all"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}>
+                      <Mail className="w-4 h-4" />
+                      Ingresar con email y contraseña
+                    </button>
+                  </div>
+
+                  <p className="text-center text-xs mt-6 px-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Si no tienes un PIN, contacta a tu administrador para que te asigne uno.
                   </p>
                 </motion.div>
               )}
@@ -272,15 +396,24 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
   );
 }
 
-function RoleCard({ icon, title, subtitle, onClick }: {
-  icon: React.ReactNode; title: string; subtitle: string; onClick: () => void;
+function RoleCard({ icon, title, subtitle, onClick, accent }: {
+  icon: React.ReactNode; title: string; subtitle: string; onClick: () => void; accent?: boolean;
 }) {
   return (
     <motion.button whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }} onClick={onClick}
       className="w-full flex items-center gap-4 px-5 py-4 text-left transition-all duration-200 rounded-none group"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(242,225,71,0.4)"; (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.04)"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}>
+      style={{
+        background: accent ? "rgba(242,225,71,0.04)" : "rgba(255,255,255,0.03)",
+        border: accent ? "1px solid rgba(242,225,71,0.2)" : "1px solid rgba(255,255,255,0.07)",
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(242,225,71,0.4)";
+        (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.07)";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = accent ? "rgba(242,225,71,0.2)" : "rgba(255,255,255,0.07)";
+        (e.currentTarget as HTMLElement).style.background = accent ? "rgba(242,225,71,0.04)" : "rgba(255,255,255,0.03)";
+      }}>
       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200"
         style={{ background: "rgba(242,225,71,0.1)", color: YELLOW }}>
         {icon}

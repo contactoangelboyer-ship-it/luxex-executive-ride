@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { BookingSystem } from "@/components/BookingSystem";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef(null);
@@ -77,7 +77,7 @@ export default function About() {
             <img src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
               alt="LuxEx" className="h-16 w-auto object-contain" />
           </a>
-          <BookingSystem triggerClassName="text-[10px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 bg-[#F2E147] text-black hover:bg-white transition-colors rounded-none" />
+          <BookingSystem triggerClassName="text-[10px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 btn-gold text-black transition-colors rounded-none" />
         </div>
       </header>
 
@@ -86,7 +86,7 @@ export default function About() {
         {/* Hero */}
         <section className="relative py-24 md:py-32 border-b border-white/[0.06] overflow-hidden">
           <div className="absolute inset-0 opacity-[0.04]"
-            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #F2E147 0%, transparent 50%)" }} />
+            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #C9A84C 0%, transparent 50%)" }} />
           <div className="max-w-[1200px] mx-auto px-6 lg:px-12">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
               <div className="w-8 h-[2px] mb-6" style={{ background: YELLOW }} />
@@ -149,9 +149,9 @@ export default function About() {
               <div className="space-y-4">
                 {VALUES.map((v, i) => (
                   <Reveal key={v.title} delay={i * 0.1}>
-                    <div className="border border-white/[0.07] p-6 bg-[#0a0a0a] group hover:border-[#F2E147]/20 transition-colors">
+                    <div className="border border-white/[0.07] p-6 bg-[#0a0a0a] group hover:border-[#C9A84C]/20 transition-colors">
                       <div className="flex items-start gap-4">
-                        <div className="shrink-0 w-9 h-9 border border-white/10 flex items-center justify-center group-hover:border-[#F2E147]/30 transition-colors"
+                        <div className="shrink-0 w-9 h-9 border border-white/10 flex items-center justify-center group-hover:border-[#C9A84C]/30 transition-colors"
                           style={{ color: YELLOW }}>
                           {v.icon}
                         </div>
@@ -259,18 +259,18 @@ export default function About() {
                         <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{f.label}</label>
                         <input type={f.type} placeholder={f.placeholder} required={f.required}
                           value={(form as any)[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                          className="w-full bg-[#0f0f0f] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-4 py-3.5 outline-none transition-colors" />
+                          className="w-full bg-[#0f0f0f] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-4 py-3.5 outline-none transition-colors" />
                       </div>
                     ))}
                     <div>
                       <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Message</label>
                       <textarea rows={4} placeholder="How can we help you?" required
                         value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                        className="w-full bg-[#0f0f0f] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-4 py-3.5 outline-none transition-colors resize-none" />
+                        className="w-full bg-[#0f0f0f] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-4 py-3.5 outline-none transition-colors resize-none" />
                     </div>
                     <button type="submit" disabled={sending}
                       className="w-full py-4 flex items-center justify-center gap-2 font-black text-[11px] tracking-[0.15em] uppercase transition-all disabled:opacity-60"
-                      style={{ background: YELLOW, color: "#0a0a0a" }}>
+                      style={{ background: "linear-gradient(135deg, #8B6914 0%, #C9A84C 30%, #F0D060 55%, #D4AF37 80%, #B8860B 100%)", color: "#0a0a0a" }}>
                       {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Message</>}
                     </button>
                   </form>

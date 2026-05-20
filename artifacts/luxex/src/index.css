@@ -293,3 +293,10 @@ html {
     inset: -1px;
   }
 }
+
+.btn-gold {
+  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 30%, #F0D060 55%, #D4AF37 80%, #B8860B 100%) !important;
+}
+.btn-gold:hover {
+  background: #ffffff !important;
+}

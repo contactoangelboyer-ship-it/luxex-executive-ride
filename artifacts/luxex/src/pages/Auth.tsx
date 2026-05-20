@@ -7,7 +7,7 @@ import { registerUser, loginUser, loginWithPin, setCurrentUser, type UserRole } 
 type Mode = "select" | "login" | "register" | "pin-login";
 
 const LOGO = "https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png";
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 const BG = "#060606";
 
 export default function Auth({ initialMode = "select" }: { initialMode?: Mode }) {
@@ -81,9 +81,9 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
       <div className="hidden lg:flex lg:w-[52%] flex-col relative overflow-hidden"
         style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #111111 100%)" }}>
         <div className="absolute inset-0" style={{
-          backgroundImage: "radial-gradient(circle at 30% 50%, rgba(242,225,71,0.06) 0%, transparent 60%)",
+          backgroundImage: "radial-gradient(circle at 30% 50%, rgba(201,168,76,0.06) 0%, transparent 60%)",
         }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(242,225,71,0.3), transparent)" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)" }} />
 
         <div className="relative z-10 flex flex-col h-full px-16 py-14">
           <a href="/">
@@ -233,9 +233,9 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                       <button type="button"
                         onClick={() => { setMode("pin-login"); setError(""); }}
                         className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold tracking-wide transition-all"
-                        style={{ background: "rgba(242,225,71,0.06)", border: "1px solid rgba(242,225,71,0.2)", color: YELLOW }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.1)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.06)"; }}>
+                        style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", color: YELLOW }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.1)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.06)"; }}>
                         <KeyRound className="w-4 h-4" />
                         Ingresar con PIN
                       </button>
@@ -291,7 +291,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                           borderRadius: 0,
                           letterSpacing: pin ? "0.5em" : undefined,
                         }}
-                        onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(242,225,71,0.04)"; }}
+                        onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(201,168,76,0.04)"; }}
                         onBlur={e => { (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; (e.target as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
                       />
                       <p className="mt-1.5 text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
@@ -403,19 +403,19 @@ function RoleCard({ icon, title, subtitle, onClick, accent }: {
     <motion.button whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }} onClick={onClick}
       className="w-full flex items-center gap-4 px-5 py-4 text-left transition-all duration-200 rounded-none group"
       style={{
-        background: accent ? "rgba(242,225,71,0.04)" : "rgba(255,255,255,0.03)",
-        border: accent ? "1px solid rgba(242,225,71,0.2)" : "1px solid rgba(255,255,255,0.07)",
+        background: accent ? "rgba(201,168,76,0.04)" : "rgba(255,255,255,0.03)",
+        border: accent ? "1px solid rgba(201,168,76,0.2)" : "1px solid rgba(255,255,255,0.07)",
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(242,225,71,0.4)";
-        (e.currentTarget as HTMLElement).style.background = "rgba(242,225,71,0.07)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.4)";
+        (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.07)";
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = accent ? "rgba(242,225,71,0.2)" : "rgba(255,255,255,0.07)";
-        (e.currentTarget as HTMLElement).style.background = accent ? "rgba(242,225,71,0.04)" : "rgba(255,255,255,0.03)";
+        (e.currentTarget as HTMLElement).style.borderColor = accent ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.07)";
+        (e.currentTarget as HTMLElement).style.background = accent ? "rgba(201,168,76,0.04)" : "rgba(255,255,255,0.03)";
       }}>
       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200"
-        style={{ background: "rgba(242,225,71,0.1)", color: YELLOW }}>
+        style={{ background: "rgba(201,168,76,0.1)", color: YELLOW }}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -442,7 +442,7 @@ function DarkField({ label, type = "text", value, onChange, placeholder }: {
           border: "1px solid rgba(255,255,255,0.08)",
           borderRadius: 0,
         }}
-        onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(242,225,71,0.04)"; }}
+        onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(201,168,76,0.04)"; }}
         onBlur={e => { (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; (e.target as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
       />
     </div>
@@ -465,7 +465,7 @@ function DarkPasswordField({ label, value, onChange, show, onToggle }: {
             border: "1px solid rgba(255,255,255,0.08)",
             borderRadius: 0,
           }}
-          onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(242,225,71,0.04)"; }}
+          onFocus={e => { (e.target as HTMLElement).style.borderColor = YELLOW; (e.target as HTMLElement).style.background = "rgba(201,168,76,0.04)"; }}
           onBlur={e => { (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; (e.target as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
         />
         <button type="button" onClick={onToggle}

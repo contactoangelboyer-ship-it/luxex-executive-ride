@@ -6,11 +6,11 @@ import {
   Plane, Briefcase, Shield
 } from "lucide-react";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-    pending:   { label: "Pending Review",  color: "#F2E147", bg: "rgba(242,225,71,0.1)",  icon: <Clock className="w-3.5 h-3.5" /> },
+    pending:   { label: "Pending Review",  color: "#C9A84C", bg: "rgba(201,168,76,0.1)",  icon: <Clock className="w-3.5 h-3.5" /> },
     confirmed: { label: "Confirmed",       color: "#4ade80", bg: "rgba(74,222,128,0.1)", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
     completed: { label: "Completed",       color: "#9ca3af", bg: "rgba(156,163,175,0.1)",icon: <Star className="w-3.5 h-3.5" /> },
     cancelled: { label: "Cancelled",       color: "#f87171", bg: "rgba(248,113,113,0.1)",icon: <XCircle className="w-3.5 h-3.5" /> },
@@ -116,7 +116,7 @@ export default function TrackBooking() {
               Confirmation Code
             </label>
             <div className="flex gap-3">
-              <div className="flex-1 flex items-center gap-3 border border-white/10 px-4 py-4 bg-[#0f0f0f] focus-within:border-[#F2E147] transition-colors">
+              <div className="flex-1 flex items-center gap-3 border border-white/10 px-4 py-4 bg-[#0f0f0f] focus-within:border-[#C9A84C] transition-colors">
                 <Search className="w-4 h-4 text-white/20 shrink-0" />
                 <input
                   value={code}
@@ -182,12 +182,12 @@ export default function TrackBooking() {
                 {/* Driver info (if assigned) */}
                 {booking.driverName && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                    className="border border-[#F2E147]/20 bg-[#F2E147]/5 p-5 mb-6">
+                    className="border border-[#C9A84C]/20 bg-[#C9A84C]/5 p-5 mb-6">
                     <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3" style={{ color: YELLOW }}>
                       Your Chauffeur
                     </p>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#F2E147]/10 border border-[#F2E147]/20 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center">
                         <span className="text-sm font-black" style={{ color: YELLOW }}>
                           {booking.driverName.charAt(0).toUpperCase()}
                         </span>

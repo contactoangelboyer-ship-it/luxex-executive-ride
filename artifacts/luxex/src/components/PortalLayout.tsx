@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Calendar, User, List, LogOut, Menu, X, ChevronRight } from "lucide-react";
 import { logoutUser, type AuthUser } from "@/hooks/useAuth";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 const LOGO = "https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png";
 
 const PASSENGER_NAV = [
@@ -54,7 +54,7 @@ export function PortalLayout({ user, children, onLogout }: Props) {
             <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
               <a className="flex items-center gap-3 px-3 py-2.5 transition-all duration-150"
                 style={active
-                  ? { background: "rgba(242,225,71,0.1)", color: YELLOW, borderLeft: `2px solid ${YELLOW}` }
+                  ? { background: "rgba(201,168,76,0.1)", color: YELLOW, borderLeft: `2px solid ${YELLOW}` }
                   : { color: "rgba(255,255,255,0.5)", borderLeft: "2px solid transparent" }}
                 onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "#fff"; }}
                 onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.5)"; }}>

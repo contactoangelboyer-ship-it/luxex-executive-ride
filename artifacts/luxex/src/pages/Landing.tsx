@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { BookingSystem } from "@/components/BookingSystem";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
+const GOLD_GRADIENT = "linear-gradient(135deg, #8B6914 0%, #C9A84C 30%, #F0D060 55%, #D4AF37 80%, #B8860B 100%)";
 const BG_IMG = "https://ik.imagekit.io/xnfnvsnut/12b7a4f0-708e-41f4-a2ec-82db1e5dc1ab.png?updatedAt=1775643651934";
 
 function CustomCursor() {
@@ -47,9 +48,9 @@ function CustomCursor() {
       </motion.div>
       <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
         style={{ x: trailX, y: trailY, translateX: "-50%", translateY: "-50%" }}>
-        <motion.div animate={{ scale: hovered ? 2.2 : 1, borderColor: hovered ? YELLOW : "rgba(242,225,71,0.3)" }}
+        <motion.div animate={{ scale: hovered ? 2.2 : 1, borderColor: hovered ? YELLOW : "rgba(201,168,76,0.3)" }}
           transition={{ duration: 0.25 }}
-          className="w-8 h-8 rounded-full border" style={{ borderColor: "rgba(242,225,71,0.25)" }} />
+          className="w-8 h-8 rounded-full border" style={{ borderColor: "rgba(201,168,76,0.25)" }} />
       </motion.div>
     </>
   );
@@ -58,7 +59,7 @@ function CustomCursor() {
 function ProgressBar() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 30 });
-  return <motion.div className="fixed top-0 left-0 right-0 h-[2px] z-[9997] origin-left" style={{ scaleX, background: YELLOW }} />;
+  return <motion.div className="fixed top-0 left-0 right-0 h-[2px] z-[9997] origin-left" style={{ scaleX, background: GOLD_GRADIENT }} />;
 }
 
 function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
@@ -244,7 +245,7 @@ function TestimonialsSection() {
                   </blockquote>
                   <div className="flex items-center gap-4 pt-2 border-t border-white/[0.06]">
                     <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-black text-sm shrink-0"
-                      style={{ background: YELLOW }}>
+                      style={{ background: GOLD_GRADIENT }}>
                       {t.initial}
                     </div>
                     <div>
@@ -343,17 +344,17 @@ function HowItWorksSection() {
                 <div className="flex items-start justify-between mb-8">
                   <span className="font-black text-[11px] tracking-widest" style={{ color: YELLOW }}>{s.n}</span>
                   <motion.span
-                    className="text-white/20 group-hover:text-[#F2E147] transition-colors duration-300"
+                    className="text-white/20 group-hover:text-[#C9A84C] transition-colors duration-300"
                     whileHover={{ scale: 1.1 }}
                   >
                     {s.icon}
                   </motion.span>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight text-white mb-4 group-hover:text-[#F2E147] transition-colors duration-300">
+                <h3 className="font-black text-xl uppercase tracking-tight text-white mb-4 group-hover:text-[#C9A84C] transition-colors duration-300">
                   {s.title}
                 </h3>
                 <p className="text-sm text-white/55 font-light leading-relaxed">{s.desc}</p>
-                <motion.div className="h-px mt-8 origin-left" style={{ background: YELLOW }}
+                <motion.div className="h-px mt-8 origin-left" style={{ background: GOLD_GRADIENT }}
                   initial={{ scaleX: 0 }}
                   whileInView={{ scaleX: 1 }}
                   viewport={{ once: true }}
@@ -435,12 +436,12 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="h-28 md:h-36 w-auto object-contain mb-14"
-        style={{ filter: "drop-shadow(0 0 36px rgba(242,225,71,0.45))" }}
+        style={{ filter: "drop-shadow(0 0 36px rgba(201,168,76,0.45))" }}
       />
       <div className="w-44 h-[2px] bg-white/5 overflow-hidden">
         <motion.div
           className="h-full"
-          style={{ background: YELLOW, width: `${progress}%` }}
+          style={{ background: GOLD_GRADIENT, width: `${progress}%` }}
         />
       </div>
       <motion.p
@@ -485,7 +486,7 @@ function FAQSection() {
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full flex items-start justify-between gap-6 py-7 text-left group"
               >
-                <h3 className="font-bold text-base md:text-lg text-white group-hover:text-[#F2E147] transition-colors duration-200 leading-snug">
+                <h3 className="font-bold text-base md:text-lg text-white group-hover:text-[#C9A84C] transition-colors duration-200 leading-snug">
                   {faq.q}
                 </h3>
                 <motion.div
@@ -493,7 +494,7 @@ function FAQSection() {
                   transition={{ duration: 0.25 }}
                   className="shrink-0 mt-1"
                 >
-                  <Plus className="w-4 h-4 text-white/30 group-hover:text-[#F2E147] transition-colors duration-200" />
+                  <Plus className="w-4 h-4 text-white/30 group-hover:text-[#C9A84C] transition-colors duration-200" />
                 </motion.div>
               </button>
               <AnimatePresence>
@@ -519,12 +520,12 @@ function FAQSection() {
           <p className="text-sm text-white/50 font-light mb-4">Still have questions? We're available 24/7.</p>
           <div className="flex flex-wrap gap-4">
             <a href="tel:+18483888817"
-              className="flex items-center gap-2 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-3 border border-white/10 text-white/70 hover:border-[#F2E147]/40 hover:text-white transition-colors">
+              className="flex items-center gap-2 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-3 border border-white/10 text-white/70 hover:border-[#C9A84C]/40 hover:text-white transition-colors">
               <Phone className="w-3.5 h-3.5" style={{ color: YELLOW }} />
               +1 (848) 388-8817
             </a>
             <a href="https://wa.me/18483888817" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-3 border border-white/10 text-white/70 hover:border-[#F2E147]/40 hover:text-white transition-colors">
+              className="flex items-center gap-2 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-3 border border-white/10 text-white/70 hover:border-[#C9A84C]/40 hover:text-white transition-colors">
               <MessageCircle className="w-3.5 h-3.5" style={{ color: YELLOW }} />
               WhatsApp
             </a>
@@ -557,7 +558,7 @@ function ServiceAreasSection() {
           {areas.map((a, i) => (
             <Reveal key={i} delay={i * 0.08}>
               <div className="bg-[#060606] p-8 group hover:bg-[#0a0a0a] transition-colors duration-300">
-                <p className="font-black text-5xl mb-4 transition-colors duration-300 group-hover:text-[#F2E147]"
+                <p className="font-black text-5xl mb-4 transition-colors duration-300 group-hover:text-[#C9A84C]"
                   style={{ color: "rgba(255,255,255,0.08)" }}>
                   {a.abbr}
                 </p>
@@ -671,7 +672,7 @@ export default function Landing() {
               alt="Luxex Executive Ride"
               whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.2 }}
-              className="h-24 sm:h-28 md:h-28 w-auto object-contain drop-shadow-[0_0_22px_rgba(242,225,71,0.45)]"
+              className="h-24 sm:h-28 md:h-28 w-auto object-contain drop-shadow-[0_0_22px_rgba(201,168,76,0.45)]"
             />
           </a>
 
@@ -700,7 +701,7 @@ export default function Landing() {
             <a href="/login" className="hidden md:flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.15em] uppercase text-white/50 hover:text-white transition-colors duration-200">
               Sign In
             </a>
-            <BookingSystem triggerClassName="hidden md:block text-[11px] font-bold tracking-[0.15em] uppercase px-6 py-2.5 bg-[#F2E147] text-black hover:bg-white transition-colors duration-200 rounded-none" />
+            <BookingSystem triggerClassName="hidden md:block text-[11px] font-bold tracking-[0.15em] uppercase px-6 py-2.5 btn-gold text-black transition-colors duration-200 rounded-none" />
             <motion.button whileTap={{ scale: 0.92 }} onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden w-9 h-9 flex items-center justify-center border border-white/10 text-white/60 hover:text-white">
               {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -723,7 +724,7 @@ export default function Landing() {
               <motion.a href="/track" onClick={() => setMenuOpen(false)}
                 initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.22 }}
                 className="text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: YELLOW }}>Track Booking</motion.a>
-              <BookingSystem triggerClassName="w-fit text-[11px] font-bold tracking-[0.15em] uppercase px-6 py-3 bg-[#F2E147] text-black rounded-none" />
+              <BookingSystem triggerClassName="w-fit text-[11px] font-bold tracking-[0.15em] uppercase px-6 py-3 bg-[#C9A84C] text-black rounded-none" />
               <div className="border-t border-white/5 pt-4 mt-2 flex flex-col gap-3">
                 <motion.a href="/login" onClick={() => setMenuOpen(false)}
                   initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.28 }}
@@ -745,16 +746,16 @@ export default function Landing() {
       <section ref={heroRef} className="relative min-h-screen grid lg:grid-cols-2 overflow-hidden">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <motion.img src={BG_IMG} alt="" style={{ y: bgY }}
-            className="w-full h-[115%] object-cover object-[65%_center] md:object-[55%_center] -top-[7%] absolute" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#060606] via-[#060606]/90 to-[#060606]/30 md:from-[#060606] md:via-[#060606]/80 md:to-[#060606]/10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/50" />
+            className="w-full h-[115%] object-cover object-[center_20%] md:object-[55%_center] -top-[7%] absolute" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#060606]/85 via-[#060606]/60 to-[#060606]/20 md:from-[#060606] md:via-[#060606]/80 md:to-[#060606]/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
         </div>
 
         {/* Left: headline + CTA */}
         <div className="relative z-10 flex flex-col justify-center pt-28 pb-12 px-6 lg:px-16 lg:pl-20">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             <motion.div initial={{ width: 0 }} animate={{ width: 48 }} transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="h-px mb-7" style={{ background: YELLOW }} />
+              className="h-px mb-7" style={{ background: GOLD_GRADIENT }} />
 
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
               className="text-[11px] font-bold tracking-[0.25em] uppercase text-white/65 mb-5">
@@ -783,7 +784,7 @@ export default function Landing() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.88, duration: 0.6 }}
               className="flex flex-col gap-4 mb-10">
               <div className="flex items-center gap-5">
-                <BookingSystem triggerClassName="text-[11px] font-bold tracking-[0.18em] uppercase px-8 py-4 bg-[#F2E147] text-black hover:bg-white transition-colors duration-200 rounded-none" />
+                <BookingSystem triggerClassName="text-[11px] font-bold tracking-[0.18em] uppercase px-8 py-4 btn-gold text-black transition-colors duration-200 rounded-none" />
                 <a href="#services"
                   className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.15em] uppercase text-white/55 hover:text-white transition-colors group">
                   Our services
@@ -849,12 +850,12 @@ export default function Landing() {
                   transition={{ delay: 1.15 + i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   className="flex items-center gap-4 px-7 py-4 group hover:bg-white/[0.03] transition-colors duration-200"
                 >
-                  <span className="text-white/30 group-hover:text-[#F2E147] transition-colors duration-200 shrink-0">{item.icon}</span>
+                  <span className="text-white/30 group-hover:text-[#C9A84C] transition-colors duration-200 shrink-0">{item.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold text-white/80 group-hover:text-white transition-colors duration-200 truncate">{item.label}</p>
                     <p className="text-[10px] text-white/30 font-light tracking-wide">{item.sub}</p>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-white/15 group-hover:text-[#F2E147] transition-colors duration-200 shrink-0" />
+                  <ArrowRight className="w-3 h-3 text-white/15 group-hover:text-[#C9A84C] transition-colors duration-200 shrink-0" />
                 </motion.a>
               ))}
             </div>
@@ -879,7 +880,7 @@ export default function Landing() {
       </section>
 
       {/* ── Ticker ── */}
-      <div className="overflow-hidden" style={{ background: YELLOW }}>
+      <div className="overflow-hidden" style={{ background: GOLD_GRADIENT }}>
         <motion.div animate={{ x: ["0%", "-50%"] }} transition={{ repeat: Infinity, duration: 22, ease: "linear" }}
           className="flex whitespace-nowrap py-3">
           {Array(8).fill(null).map((_, i) => (
@@ -914,13 +915,13 @@ export default function Landing() {
                     <motion.span animate={{ color: activeService === i ? YELLOW : "rgba(255,255,255,0.40)" }} className="shrink-0">
                       {s.icon}
                     </motion.span>
-                    <h3 className="font-black text-2xl md:text-3xl uppercase tracking-tight group-hover:text-[#F2E147] transition-colors duration-300">
+                    <h3 className="font-black text-2xl md:text-3xl uppercase tracking-tight group-hover:text-[#C9A84C] transition-colors duration-300">
                       {s.title}
                     </h3>
                   </div>
                   <p className="text-white/65 text-sm font-light leading-relaxed md:max-w-[280px]">{s.body}</p>
                   <motion.div animate={{ rotate: activeService === i ? 90 : 0 }} transition={{ duration: 0.3 }} className="hidden md:block shrink-0">
-                    <ArrowRight className="w-4 h-4 text-white/45 group-hover:text-[#F2E147] transition-colors" />
+                    <ArrowRight className="w-4 h-4 text-white/45 group-hover:text-[#C9A84C] transition-colors" />
                   </motion.div>
                 </div>
 
@@ -932,7 +933,7 @@ export default function Landing() {
                         <p className="text-white/75 text-sm font-light leading-relaxed max-w-[440px]">{s.detail}</p>
                         <div onClick={(e) => e.stopPropagation()}>
                           <BookingSystem
-                            triggerClassName="shrink-0 text-[10px] font-bold tracking-[0.2em] uppercase px-6 py-3 border border-[#F2E147] text-[#F2E147] hover:bg-[#F2E147] hover:text-black transition-colors rounded-none"
+                            triggerClassName="shrink-0 text-[10px] font-bold tracking-[0.2em] uppercase px-6 py-3 border border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C] hover:text-black transition-colors rounded-none"
                             triggerText="Book this service"
                           />
                         </div>
@@ -941,7 +942,7 @@ export default function Landing() {
                   )}
                 </AnimatePresence>
 
-                <motion.div className="h-px origin-left" style={{ background: YELLOW }}
+                <motion.div className="h-px origin-left" style={{ background: GOLD_GRADIENT }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: activeService === i ? 1 : 0 }}
                   transition={{ duration: 0.4 }} />
@@ -972,7 +973,7 @@ export default function Landing() {
                   <motion.div className="absolute inset-0 z-0 origin-bottom"
                     variants={{ rest: { scaleY: 0 }, hovered: { scaleY: 1 } }}
                     transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ background: "linear-gradient(to top, rgba(242,225,71,0.08), transparent)" }} />
+                    style={{ background: "linear-gradient(to top, rgba(201,168,76,0.08), transparent)" }} />
 
                   {/* Image — solid black bg, object-contain so the full car is always visible */}
                   <div className="relative w-full overflow-hidden bg-black flex items-center justify-center" style={{ aspectRatio: "16/10" }}>
@@ -990,12 +991,12 @@ export default function Landing() {
                     {/* Subtle bottom fade to blend into card body */}
                     <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-black to-transparent pointer-events-none" />
                     {v.tag && (
-                      <span className="absolute top-4 left-4 text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 text-black font-black" style={{ background: YELLOW }}>{v.tag}</span>
+                      <span className="absolute top-4 left-4 text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 text-black font-black" style={{ background: GOLD_GRADIENT }}>{v.tag}</span>
                     )}
                   </div>
 
                   <div className="relative z-10 flex flex-col gap-5 p-8 flex-1">
-                    <motion.div className="h-px" style={{ background: YELLOW }}
+                    <motion.div className="h-px" style={{ background: GOLD_GRADIENT }}
                       variants={{ rest: { width: 32 }, hovered: { width: 56 } }}
                       transition={{ duration: 0.3 }} />
                     <div className="flex-1">
@@ -1010,7 +1011,7 @@ export default function Landing() {
                     </div>
                     <motion.div variants={{ rest: { opacity: 0, y: 8 }, hovered: { opacity: 1, y: 0 } }} transition={{ duration: 0.25 }}>
                       <BookingSystem
-                        triggerClassName="w-fit p-0 bg-transparent border-none shadow-none text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5 text-[#F2E147]"
+                        triggerClassName="w-fit p-0 bg-transparent border-none shadow-none text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5 text-[#C9A84C]"
                         triggerText="Reserve this vehicle →"
                       />
                     </motion.div>
@@ -1044,7 +1045,7 @@ export default function Landing() {
                 ].map(([label, desc], i) => (
                   <motion.div key={i} className="flex gap-6 py-5 group cursor-default"
                     whileHover={{ x: 6 }} transition={{ duration: 0.2 }}>
-                    <span className="font-black text-sm uppercase text-white w-32 shrink-0 pt-0.5 group-hover:text-[#F2E147] transition-colors duration-200">{label}</span>
+                    <span className="font-black text-sm uppercase text-white w-32 shrink-0 pt-0.5 group-hover:text-[#C9A84C] transition-colors duration-200">{label}</span>
                     <span className="text-sm text-white/65 font-light leading-relaxed group-hover:text-white/85 transition-colors duration-200">{desc}</span>
                   </motion.div>
                 ))}
@@ -1059,8 +1060,8 @@ export default function Landing() {
                   { value: "100%", label: "On-time Rate" },
                   { value: "4.9★", label: "Average Rating" },
                 ].map((stat, i) => (
-                  <div key={i} className="border border-white/[0.07] p-7 group hover:border-[#F2E147]/30 transition-colors duration-300">
-                    <p className="font-black text-3xl mb-2 group-hover:text-[#F2E147] transition-colors duration-300" style={{ color: i === 0 ? YELLOW : "white" }}>
+                  <div key={i} className="border border-white/[0.07] p-7 group hover:border-[#C9A84C]/30 transition-colors duration-300">
+                    <p className="font-black text-3xl mb-2 group-hover:text-[#C9A84C] transition-colors duration-300" style={{ color: i === 0 ? YELLOW : "white" }}>
                       {stat.value}
                     </p>
                     <p className="text-[11px] tracking-widest uppercase text-white/35 font-semibold">{stat.label}</p>
@@ -1083,7 +1084,7 @@ export default function Landing() {
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
               <div>
                 <motion.div initial={{ width: 0 }} whileInView={{ width: 48 }} viewport={{ once: true }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="h-px mb-8" style={{ background: YELLOW }} />
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="h-px mb-8" style={{ background: GOLD_GRADIENT }} />
                 <h2 className="font-black uppercase leading-[0.9] tracking-tight" style={{ fontSize: "clamp(3rem,8vw,7rem)" }}>
                   Book your<br /><span style={{ color: YELLOW }}>ride now.</span>
                 </h2>
@@ -1092,7 +1093,7 @@ export default function Landing() {
                 <p className="text-white/65 text-sm font-light max-w-[240px] lg:text-right">
                   Fast, secure reservations. A concierge responds within minutes.
                 </p>
-                <BookingSystem triggerClassName="text-[11px] font-bold tracking-[0.18em] uppercase px-10 py-5 bg-[#F2E147] text-black hover:bg-white transition-colors duration-200 rounded-none" />
+                <BookingSystem triggerClassName="text-[11px] font-bold tracking-[0.18em] uppercase px-10 py-5 btn-gold text-black transition-colors duration-200 rounded-none" />
               </div>
             </div>
           </Reveal>
@@ -1113,7 +1114,7 @@ export default function Landing() {
               <img
                 src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
                 alt="Luxex Executive Ride"
-                className="h-20 md:h-24 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(242,225,71,0.35)]"
+                className="h-20 md:h-24 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(201,168,76,0.35)]"
               />
               <p className="text-sm text-white/80 font-light leading-relaxed">
                 Premium executive transportation. New York, New Jersey, Connecticut & Pennsylvania.
@@ -1141,13 +1142,13 @@ export default function Landing() {
               <div>
                 <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/60 mb-5">Contact</p>
                 <ul className="space-y-3">
-                  <li><a href="tel:+18483888817" className="flex items-center gap-2 text-sm text-white/75 hover:text-white transition-colors font-light"><Phone className="w-3 h-3 text-[#F2E147]" />+1 (848) 388-8817</a></li>
-                  <li><a href="mailto:info@luxexride.com" className="flex items-center gap-2 text-sm text-white/75 hover:text-white transition-colors font-light"><Mail className="w-3 h-3 text-[#F2E147]" />info@luxexride.com</a></li>
-                  <li className="flex items-center gap-2 text-sm text-white/75 font-light"><MapPin className="w-3 h-3 text-[#F2E147] shrink-0" />New Jersey, USA</li>
+                  <li><a href="tel:+18483888817" className="flex items-center gap-2 text-sm text-white/75 hover:text-white transition-colors font-light"><Phone className="w-3 h-3 text-[#C9A84C]" />+1 (848) 388-8817</a></li>
+                  <li><a href="mailto:info@luxexride.com" className="flex items-center gap-2 text-sm text-white/75 hover:text-white transition-colors font-light"><Mail className="w-3 h-3 text-[#C9A84C]" />info@luxexride.com</a></li>
+                  <li className="flex items-center gap-2 text-sm text-white/75 font-light"><MapPin className="w-3 h-3 text-[#C9A84C] shrink-0" />New Jersey, USA</li>
                   <li>
                     <a href="https://wa.me/18483888817" target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-sm text-white/75 hover:text-white transition-colors font-light">
-                      <MessageCircle className="w-3 h-3 text-[#F2E147]" />WhatsApp
+                      <MessageCircle className="w-3 h-3 text-[#C9A84C]" />WhatsApp
                     </a>
                   </li>
                 </ul>
@@ -1219,7 +1220,7 @@ export default function Landing() {
             <div className="flex gap-2">
               <button onClick={acceptCookies}
                 className="flex-1 py-2 text-[10px] font-bold tracking-[0.15em] uppercase transition-colors"
-                style={{ background: YELLOW, color: "#0a0a0a" }}>
+                style={{ background: GOLD_GRADIENT, color: "#0a0a0a" }}>
                 Accept
               </button>
               <button onClick={acceptCookies}
@@ -1250,7 +1251,7 @@ export default function Landing() {
                   +1 (848) 388-8817
                 </a>
                 <BookingSystem
-                  triggerClassName="text-[10px] font-bold tracking-[0.18em] uppercase px-6 py-2.5 bg-[#F2E147] text-black hover:bg-white transition-colors rounded-none"
+                  triggerClassName="text-[10px] font-bold tracking-[0.18em] uppercase px-6 py-2.5 btn-gold text-black transition-colors rounded-none"
                 />
               </div>
             </div>

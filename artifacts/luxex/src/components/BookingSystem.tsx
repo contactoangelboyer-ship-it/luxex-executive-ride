@@ -10,7 +10,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { RouteMap, fetchRoute, type RouteInfo } from "./RouteMap";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 type ServiceType = "airport" | "corporate" | "hourly" | "event";
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -198,8 +198,8 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
     <div className="relative">
       <div ref={mapDivRef} className="hidden" />
       <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{label}</label>
-      <div className={`flex items-center gap-3 border px-4 py-3.5 transition-colors duration-200 ${focused ? "border-[#F2E147]" : "border-white/10"} bg-[#0f0f0f]`}>
-        <span className="text-[#F2E147] shrink-0">{icon}</span>
+      <div className={`flex items-center gap-3 border px-4 py-3.5 transition-colors duration-200 ${focused ? "border-[#C9A84C]" : "border-white/10"} bg-[#0f0f0f]`}>
+        <span className="text-[#C9A84C] shrink-0">{icon}</span>
         <input
           className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none"
           placeholder={placeholder}
@@ -209,7 +209,7 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
           onBlur={() => setTimeout(() => setFocused(false), 200)}
         />
         {loading && <Loader2 className="w-4 h-4 animate-spin text-white/20 shrink-0" />}
-        {value && !loading && <Check className="w-4 h-4 text-[#F2E147] shrink-0" />}
+        {value && !loading && <Check className="w-4 h-4 text-[#C9A84C] shrink-0" />}
         {value && onClear && !loading && (
           <button onMouseDown={e => { e.preventDefault(); onClear(); setQuery(""); setPredictions([]); }} className="ml-1 text-white/20 hover:text-white/60 transition-colors">
             <X className="w-3.5 h-3.5" />
@@ -223,7 +223,7 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
             {predictions.map((p: any) => (
               <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
                 className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
-                <MapPin className="w-3.5 h-3.5 text-[#F2E147] shrink-0 mt-0.5" />
+                <MapPin className="w-3.5 h-3.5 text-[#C9A84C] shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs text-white/80 leading-snug block">{p.structured_formatting.main_text}</span>
                   <span className="text-[10px] text-white/30 leading-snug">{p.structured_formatting.secondary_text}</span>
@@ -241,7 +241,7 @@ function PriceLine({ label, value, highlight = false, discount = false }: { labe
   return (
     <div className={`flex justify-between items-center py-2 ${highlight ? "border-t border-white/10 mt-1 pt-3" : ""}`}>
       <span className={`text-xs font-light ${highlight ? "font-bold text-white text-sm" : discount ? "text-green-400/70" : "text-white/40"}`}>{label}</span>
-      <span className={`text-xs font-semibold tabular-nums ${highlight ? "text-[#F2E147] text-base font-black" : discount ? "text-green-400 font-bold" : "text-white/70"}`}>{value}</span>
+      <span className={`text-xs font-semibold tabular-nums ${highlight ? "text-[#C9A84C] text-base font-black" : discount ? "text-green-400 font-bold" : "text-white/70"}`}>{value}</span>
     </div>
   );
 }
@@ -451,12 +451,12 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                       {routeInfo && (
                         <div className="shrink-0 px-4 py-3 bg-[#0a0a0a] border-t border-white/[0.06] flex items-center gap-5">
                           <div className="flex items-center gap-2 text-xs">
-                            <Route className="w-3.5 h-3.5 text-[#F2E147]" />
+                            <Route className="w-3.5 h-3.5 text-[#C9A84C]" />
                             <span className="font-black text-white">{routeInfo.distanceMiles.toFixed(1)}</span>
                             <span className="text-white/30">mi</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs">
-                            <Timer className="w-3.5 h-3.5 text-[#F2E147]" />
+                            <Timer className="w-3.5 h-3.5 text-[#C9A84C]" />
                             <span className="font-black text-white">{routeInfo.durationMin}</span>
                             <span className="text-white/30">min</span>
                           </div>
@@ -495,7 +495,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                     <div className="flex items-center gap-2">
                       {step === 2 && hasMapContent && (
                         <button onClick={() => setShowMap(v => !v)}
-                          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 border text-[9px] font-black uppercase tracking-widest transition-colors ${showMap ? "border-[#F2E147]/40 text-[#F2E147] bg-[#F2E147]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
+                          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 border text-[9px] font-black uppercase tracking-widest transition-colors ${showMap ? "border-[#C9A84C]/40 text-[#C9A84C] bg-[#C9A84C]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
                           <Navigation className="w-3 h-3" /> Map
                         </button>
                       )}
@@ -528,12 +528,12 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             const active = b.service === svc.id;
                             return (
                               <motion.button key={svc.id} whileTap={{ scale: 0.98 }} onClick={() => set({ service: svc.id })}
-                                className={`flex flex-col items-start gap-3 p-5 border text-left transition-all duration-200 ${active ? "border-[#F2E147] bg-[#F2E147]/5" : "border-white/[0.07] hover:border-white/20 bg-[#0f0f0f]"}`}>
-                                <div className={`w-8 h-8 flex items-center justify-center border ${active ? "border-[#F2E147]/40 bg-[#F2E147]/10" : "border-white/10"}`}>
-                                  <Icon className={`w-4 h-4 ${active ? "text-[#F2E147]" : "text-white/40"}`} />
+                                className={`flex flex-col items-start gap-3 p-5 border text-left transition-all duration-200 ${active ? "border-[#C9A84C] bg-[#C9A84C]/5" : "border-white/[0.07] hover:border-white/20 bg-[#0f0f0f]"}`}>
+                                <div className={`w-8 h-8 flex items-center justify-center border ${active ? "border-[#C9A84C]/40 bg-[#C9A84C]/10" : "border-white/10"}`}>
+                                  <Icon className={`w-4 h-4 ${active ? "text-[#C9A84C]" : "text-white/40"}`} />
                                 </div>
                                 <div>
-                                  <p className={`font-black text-sm uppercase tracking-tight ${active ? "text-[#F2E147]" : "text-white"}`}>{svc.label}</p>
+                                  <p className={`font-black text-sm uppercase tracking-tight ${active ? "text-[#C9A84C]" : "text-white"}`}>{svc.label}</p>
                                   <p className="text-[10px] text-white/30 mt-0.5 leading-relaxed">{svc.desc}</p>
                                 </div>
                               </motion.button>
@@ -578,7 +578,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
 
                           {b.stops.length < 4 && (
                             <button onClick={addStop}
-                              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-[#F2E147] transition-colors py-1">
+                              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-[#C9A84C] transition-colors py-1">
                               <Plus className="w-3.5 h-3.5" />
                               {b.service === "hourly"
                                 ? `Add stop ${b.stops.length > 0 ? `(${b.stops.length + 1} of 4)` : "· included in hourly rate"}`
@@ -594,8 +594,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           {/* Route info banner */}
                           {routeInfo && (
                             <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                              className="flex items-center gap-5 px-4 py-3 bg-[#F2E147]/5 border border-[#F2E147]/15">
-                              <Route className="w-4 h-4 text-[#F2E147] shrink-0" />
+                              className="flex items-center gap-5 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/15">
+                              <Route className="w-4 h-4 text-[#C9A84C] shrink-0" />
                               <div className="flex gap-5 text-xs">
                                 <div><span className="font-black text-white">{routeInfo.distanceMiles.toFixed(1)}</span><span className="text-white/30 ml-1">miles</span></div>
                                 <div><span className="font-black text-white">{routeInfo.durationMin}</span><span className="text-white/30 ml-1">min est.</span></div>
@@ -608,16 +608,16 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Date</label>
-                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#F2E147] transition-colors">
-                                <Calendar className="w-4 h-4 text-[#F2E147] shrink-0" />
+                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#C9A84C] transition-colors">
+                                <Calendar className="w-4 h-4 text-[#C9A84C] shrink-0" />
                                 <input type="date" min={minDate} value={b.date} onChange={e => set({ date: e.target.value })}
                                   className="flex-1 bg-transparent text-sm text-white outline-none" style={{ colorScheme: "dark" }} />
                               </div>
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Time</label>
-                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#F2E147] transition-colors">
-                                <Clock className="w-4 h-4 text-[#F2E147] shrink-0" />
+                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#C9A84C] transition-colors">
+                                <Clock className="w-4 h-4 text-[#C9A84C] shrink-0" />
                                 <input type="time" value={b.time} onChange={e => set({ time: e.target.value })}
                                   className="flex-1 bg-transparent text-sm text-white outline-none" style={{ colorScheme: "dark" }} />
                               </div>
@@ -633,7 +633,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                               <div key={f.key}>
                                 <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{f.label}</label>
                                 <div className="flex items-center gap-3 border border-white/10 px-4 py-3 bg-[#0f0f0f]">
-                                  <span className="text-[#F2E147] shrink-0">{f.icon}</span>
+                                  <span className="text-[#C9A84C] shrink-0">{f.icon}</span>
                                   <button onClick={() => set({ [f.key]: Math.max(f.min, b[f.key] - 1) })} className="text-white/30 hover:text-white transition-colors w-5 text-center">−</button>
                                   <span className="flex-1 text-center text-sm font-bold text-white">{b[f.key]}</span>
                                   <button onClick={() => set({ [f.key]: Math.min(f.max, b[f.key] + 1) })} className="text-white/30 hover:text-white transition-colors w-5 text-center">+</button>
@@ -649,7 +649,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                               <div className="flex gap-2 flex-wrap">
                                 {[2, 3, 4, 5, 6, 8, 10, 12].map(h => (
                                   <button key={h} onClick={() => set({ hours: h })}
-                                    className={`px-4 py-2 border text-xs font-black transition-all ${b.hours === h ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/10" : "border-white/10 text-white/30 hover:border-white/20"}`}>
+                                    className={`px-4 py-2 border text-xs font-black transition-all ${b.hours === h ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/10" : "border-white/10 text-white/30 hover:border-white/20"}`}>
                                     {h}h
                                   </button>
                                 ))}
@@ -663,13 +663,13 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                               <div className="grid grid-cols-2 gap-2">
                                 {(["arrival", "departure"] as FlightType[]).map(ft => (
                                   <button key={ft} onClick={() => set({ flightType: ft })}
-                                    className={`flex items-center gap-2 px-3 py-2 border text-xs font-bold capitalize transition-all ${b.flightType === ft ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
+                                    className={`flex items-center gap-2 px-3 py-2 border text-xs font-bold capitalize transition-all ${b.flightType === ft ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
                                     <Plane className={`w-3.5 h-3.5 ${ft === "departure" ? "rotate-45" : "-rotate-45"}`} /> {ft}
                                   </button>
                                 ))}
                               </div>
-                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#F2E147] transition-colors">
-                                <Plane className="w-4 h-4 text-[#F2E147] shrink-0" />
+                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#C9A84C] transition-colors">
+                                <Plane className="w-4 h-4 text-[#C9A84C] shrink-0" />
                                 <input placeholder="Flight number (optional)" value={b.flightNumber} onChange={e => set({ flightNumber: e.target.value })}
                                   className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none" />
                               </div>
@@ -683,7 +683,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                               { key: "childSeat" as const, icon: <Baby className="w-4 h-4" />, label: "Child Seat", price: "+$15" },
                             ].map(opt => (
                               <button key={opt.key} onClick={() => set({ [opt.key]: !b[opt.key] })}
-                                className={`flex-1 flex items-center gap-2 px-4 py-3 border text-xs font-bold transition-all ${b[opt.key] ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
+                                className={`flex-1 flex items-center gap-2 px-4 py-3 border text-xs font-bold transition-all ${b[opt.key] ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/5" : "border-white/10 text-white/30 hover:border-white/20"}`}>
                                 {opt.icon} {opt.label}
                                 <span className="ml-auto text-[10px] opacity-60">{opt.price}</span>
                               </button>
@@ -711,16 +711,16 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             const active = b.vehicleId === v.id;
                             return (
                               <motion.button key={v.id} onClick={() => set({ vehicleId: v.id })} whileTap={{ scale: 0.995 }}
-                                className={`w-full text-left border transition-all duration-200 overflow-hidden ${active ? "border-[#F2E147]" : "border-white/[0.07] hover:border-white/20"}`}>
+                                className={`w-full text-left border transition-all duration-200 overflow-hidden ${active ? "border-[#C9A84C]" : "border-white/[0.07] hover:border-white/20"}`}>
                                 <div className="relative h-36 overflow-hidden bg-[#0a0a0a]">
                                   <img src={v.img} alt={v.name} className={`w-full h-full object-cover transition-transform duration-500 ${active ? "scale-105" : "scale-100 hover:scale-105"}`} />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                  {v.tag && <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase px-2 py-1 border border-[#F2E147]/50 text-[#F2E147] bg-black/60 backdrop-blur-sm">{v.tag}</span>}
-                                  {active && <span className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center bg-[#F2E147] rounded-full"><Check className="w-3 h-3 text-black" strokeWidth={3} /></span>}
+                                  {v.tag && <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase px-2 py-1 border border-[#C9A84C]/50 text-[#C9A84C] bg-black/60 backdrop-blur-sm">{v.tag}</span>}
+                                  {active && <span className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center bg-[#C9A84C] rounded-full"><Check className="w-3 h-3 text-black" strokeWidth={3} /></span>}
                                 </div>
-                                <div className={`px-4 py-3 flex items-start justify-between gap-3 transition-colors duration-200 ${active ? "bg-[#F2E147]/5" : "bg-[#111] hover:bg-white/[0.02]"}`}>
+                                <div className={`px-4 py-3 flex items-start justify-between gap-3 transition-colors duration-200 ${active ? "bg-[#C9A84C]/5" : "bg-[#111] hover:bg-white/[0.02]"}`}>
                                   <div className="min-w-0">
-                                    <p className={`font-black text-sm uppercase tracking-wide leading-tight ${active ? "text-[#F2E147]" : "text-white"}`}>{v.name}</p>
+                                    <p className={`font-black text-sm uppercase tracking-wide leading-tight ${active ? "text-[#C9A84C]" : "text-white"}`}>{v.name}</p>
                                     <p className="text-[10px] text-white/35 mt-0.5 truncate">{v.model}</p>
                                     <div className="flex gap-3 mt-1.5">
                                       <span className="text-[10px] text-white/25">Up to {v.maxPax} pax</span>
@@ -735,7 +735,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                 </div>
                                 {active && (
                                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                                    className="px-4 pb-3 pt-0 border-t border-[#F2E147]/10 bg-[#F2E147]/5">
+                                    className="px-4 pb-3 pt-0 border-t border-[#C9A84C]/10 bg-[#C9A84C]/5">
                                     <PriceLine label={p.baseLabel} value={`$${p.base.toFixed(2)}`} />
                                     {p.mileage > 0 && <PriceLine label={`${dist.toFixed(1)} mi × $${v.perMile}/mi`} value={`$${p.mileage.toFixed(2)}`} />}
                                     {p.stopsFee > 0 && <PriceLine label={`${validStops.length} stop${validStops.length > 1 ? "s" : ""} × $15`} value={`$${p.stopsFee.toFixed(2)}`} />}
@@ -758,8 +758,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           <div className="pt-2">
                             <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Promo Code (optional)</label>
                             <div className="flex gap-2">
-                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3 bg-[#0f0f0f] flex-1 focus-within:border-[#F2E147] transition-colors">
-                                <Tag className="w-4 h-4 text-[#F2E147]/40 shrink-0" />
+                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3 bg-[#0f0f0f] flex-1 focus-within:border-[#C9A84C] transition-colors">
+                                <Tag className="w-4 h-4 text-[#C9A84C]/40 shrink-0" />
                                 <input placeholder="Enter code" value={b.promoCode}
                                   onChange={e => { set({ promoCode: e.target.value }); if (!e.target.value) setPromoDiscountPct(0); }}
                                   onKeyDown={e => { if (e.key === "Enter") checkPromo(b.promoCode); }}
@@ -786,8 +786,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           ].map(f => (
                             <div key={f.key}>
                               <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{f.label}</label>
-                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#F2E147] transition-colors">
-                                <span className="text-[#F2E147] shrink-0">{f.icon}</span>
+                              <div className="flex items-center gap-3 border border-white/10 px-4 py-3.5 bg-[#0f0f0f] focus-within:border-[#C9A84C] transition-colors">
+                                <span className="text-[#C9A84C] shrink-0">{f.icon}</span>
                                 <input type={f.type} placeholder={f.placeholder} required={f.required}
                                   className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none"
                                   value={b[f.key]} onChange={e => set({ [f.key]: e.target.value })} />
@@ -797,7 +797,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           <div>
                             <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Notes (optional)</label>
                             <textarea rows={2} placeholder="Special instructions, preferences…"
-                              className="w-full border border-white/10 bg-[#0f0f0f] px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none focus:border-[#F2E147] transition-colors"
+                              className="w-full border border-white/10 bg-[#0f0f0f] px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none focus:border-[#C9A84C] transition-colors"
                               value={b.notes} onChange={e => set({ notes: e.target.value })} />
                           </div>
                         </motion.div>
@@ -852,7 +852,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                               <div className="flex gap-1.5">
                                 {([0, 15, 18, 20] as const).map(pct => (
                                   <button key={pct} type="button" onClick={() => setGratuityPct(pct)}
-                                    className={`flex-1 py-2.5 border text-[10px] font-black tracking-widest uppercase transition-all ${gratuityPct === pct ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/10" : "border-white/[0.08] text-white/25 hover:border-white/20 hover:text-white/40"}`}>
+                                    className={`flex-1 py-2.5 border text-[10px] font-black tracking-widest uppercase transition-all ${gratuityPct === pct ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/10" : "border-white/[0.08] text-white/25 hover:border-white/20 hover:text-white/40"}`}>
                                     {pct === 0 ? "None" : `${pct}%`}
                                     {pct > 0 && price && <span className="block text-[8px] opacity-60 mt-0.5 font-semibold">${(price.subtotal * pct / 100).toFixed(0)}</span>}
                                   </button>
@@ -861,8 +861,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             </div>
 
                           </div>
-                          <div className="flex items-start gap-3 px-4 py-3 bg-[#F2E147]/5 border border-[#F2E147]/15">
-                            <AlertCircle className="w-4 h-4 text-[#F2E147] shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-3 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/15">
+                            <AlertCircle className="w-4 h-4 text-[#C9A84C] shrink-0 mt-0.5" />
                             <p className="text-xs text-white/40 leading-relaxed">A concierge will confirm your booking within minutes. No payment is collected now.</p>
                           </div>
                         </motion.div>
@@ -878,13 +878,13 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                           </motion.div>
                           <div>
                             <h3 className="font-black text-xl uppercase tracking-tight text-white mb-2">You're on the list.</h3>
-                            {confirmCode && <p className="font-mono text-[#F2E147] text-lg font-black mb-3 tracking-[0.2em]">{confirmCode}</p>}
+                            {confirmCode && <p className="font-mono text-[#C9A84C] text-lg font-black mb-3 tracking-[0.2em]">{confirmCode}</p>}
                             <p className="text-white/40 text-sm font-light max-w-[280px] leading-relaxed">
                               Our concierge will reach out to {b.email || "you"} within minutes to confirm.
                             </p>
                           </div>
                           <a href="tel:+18483888817" className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-white/30 hover:text-white transition-colors">
-                            <Phone className="w-3.5 h-3.5 text-[#F2E147]" /> +1 (848) 388-8817
+                            <Phone className="w-3.5 h-3.5 text-[#C9A84C]" /> +1 (848) 388-8817
                           </a>
                           <button onClick={reset} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors border border-white/10 px-4 py-2 mt-2">
                             Close
@@ -900,7 +900,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                     <div className="px-6 py-5 border-t border-white/[0.07] shrink-0">
                       <button onClick={next} disabled={!canNext()}
                         className="w-full py-4 text-[11px] font-black tracking-[0.2em] uppercase flex items-center justify-center gap-2 transition-opacity"
-                        style={{ background: canNext() ? YELLOW : "rgba(242,225,71,0.2)", color: canNext() ? "#000" : "rgba(242,225,71,0.3)" }}>
+                        style={{ background: canNext() ? YELLOW : "rgba(201,168,76,0.2)", color: canNext() ? "#000" : "rgba(201,168,76,0.3)" }}>
                         Continue <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>

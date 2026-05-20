@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard",   icon: LayoutDashboard },
@@ -33,7 +33,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <img
             src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
             alt="Luxex Executive Ride"
-            className="h-16 w-auto object-contain drop-shadow-[0_0_14px_rgba(242,225,71,0.3)]"
+            className="h-16 w-auto object-contain drop-shadow-[0_0_14px_rgba(201,168,76,0.3)]"
           />
           <p className="text-[9px] tracking-widest uppercase text-white/25">Admin Panel</p>
         </div>
@@ -45,7 +45,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           const active = location === item.href || location.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
-              <a className={`flex items-center gap-3 px-3 py-2.5 transition-all duration-150 group ${active ? "bg-[#F2E147]/10 text-[#F2E147]" : "text-white/35 hover:text-white hover:bg-white/[0.04]"}`}>
+              <a className={`flex items-center gap-3 px-3 py-2.5 transition-all duration-150 group ${active ? "bg-[#C9A84C]/10 text-[#C9A84C]" : "text-white/35 hover:text-white hover:bg-white/[0.04]"}`}>
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="text-xs font-semibold tracking-wide">{item.label}</span>
                 {active && <ChevronRight className="w-3 h-3 ml-auto" />}

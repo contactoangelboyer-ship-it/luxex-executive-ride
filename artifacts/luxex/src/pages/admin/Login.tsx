@@ -34,7 +34,7 @@ export default function AdminLogin() {
       <header className="px-8 py-6">
         <a href="/">
           <img
-            src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
+            src="/logo.png"
             alt="Luxex Executive Ride"
             className="h-12 w-auto object-contain drop-shadow-[0_0_14px_rgba(242,225,71,0.3)]"
           />

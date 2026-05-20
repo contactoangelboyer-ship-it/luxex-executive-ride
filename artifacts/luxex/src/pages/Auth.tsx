@@ -6,7 +6,7 @@ import { registerUser, loginUser, loginWithPin, setCurrentUser, type UserRole } 
 
 type Mode = "select" | "login" | "register" | "pin-login";
 
-const LOGO = "https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png";
+const LOGO = "/logo.png";
 const YELLOW = "#C9A84C";
 const BG = "#060606";
 

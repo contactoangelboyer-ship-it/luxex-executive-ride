@@ -31,7 +31,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="px-6 py-6 border-b border-white/[0.06]">
         <div className="flex flex-col gap-2">
           <img
-            src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
+            src="/logo.png"
             alt="Luxex Executive Ride"
             className="h-16 w-auto object-contain drop-shadow-[0_0_14px_rgba(201,168,76,0.3)]"
           />

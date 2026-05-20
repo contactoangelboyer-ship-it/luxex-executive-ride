@@ -743,16 +743,19 @@ export default function Landing() {
       </header>
 
       {/* ── Hero ── */}
-      <section ref={heroRef} className="relative min-h-screen grid lg:grid-cols-2 overflow-hidden">
+      <section ref={heroRef} className="relative min-h-[100svh] grid lg:grid-cols-2 overflow-hidden">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <motion.img src={BG_IMG} alt="" style={{ y: bgY }}
-            className="w-full h-[115%] object-cover object-[center_20%] md:object-[55%_center] -top-[7%] absolute" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#060606]/85 via-[#060606]/60 to-[#060606]/20 md:from-[#060606] md:via-[#060606]/80 md:to-[#060606]/10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            className="w-full h-full object-cover object-[center_top] md:object-[55%_center] absolute inset-0" />
+          {/* Mobile: only a bottom fade so driver shows clearly at top */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-[#060606] md:hidden" />
+          {/* Desktop: left-to-right gradient to keep text readable */}
+          <div className="absolute inset-0 hidden md:block bg-gradient-to-r from-[#060606] via-[#060606]/80 to-[#060606]/10" />
+          <div className="absolute inset-0 hidden md:block bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/50" />
         </div>
 
-        {/* Left: headline + CTA */}
-        <div className="relative z-10 flex flex-col justify-center pt-28 pb-12 px-6 lg:px-16 lg:pl-20">
+        {/* Left: headline + CTA — bottom on mobile, centered on desktop */}
+        <div className="relative z-10 flex flex-col justify-end md:justify-center pt-24 md:pt-28 pb-10 md:pb-12 px-6 lg:px-16 lg:pl-20">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             <motion.div initial={{ width: 0 }} animate={{ width: 48 }} transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="h-px mb-7" style={{ background: GOLD_GRADIENT }} />

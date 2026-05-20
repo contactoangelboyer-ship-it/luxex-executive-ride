@@ -5,7 +5,7 @@ import { LayoutDashboard, Calendar, User, List, LogOut, Menu, X, ChevronRight } 
 import { logoutUser, type AuthUser } from "@/hooks/useAuth";
 
 const YELLOW = "#C9A84C";
-const LOGO = "https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png";
+const LOGO = "/logo.png";
 
 const PASSENGER_NAV = [
   { href: "/passenger/dashboard", label: "Dashboard",   icon: LayoutDashboard },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   motion,
   useInView,
@@ -19,6 +20,7 @@ import { BookingSystem } from "@/components/BookingSystem";
 const YELLOW = "#C9A84C";
 const GOLD_GRADIENT = "linear-gradient(135deg, #8B6914 0%, #C9A84C 30%, #F0D060 55%, #D4AF37 80%, #B8860B 100%)";
 const BG_IMG = "https://ik.imagekit.io/xnfnvsnut/12b7a4f0-708e-41f4-a2ec-82db1e5dc1ab.png?updatedAt=1775643651934";
+const BG_IMG_MOBILE = "https://ik.imagekit.io/xnfnvsnut/tr:w-700,h-1100,fo-face,cm-extract/12b7a4f0-708e-41f4-a2ec-82db1e5dc1ab.png";
 
 function CustomCursor() {
   const cursorX = useMotionValue(-100);
@@ -581,6 +583,7 @@ function ServiceAreasSection() {
 }
 
 export default function Landing() {
+  const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showSticky, setShowSticky] = useState(false);
@@ -745,11 +748,19 @@ export default function Landing() {
       {/* ── Hero ── */}
       <section ref={heroRef} className="relative min-h-[100svh] grid lg:grid-cols-2 overflow-hidden">
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <motion.img src={BG_IMG} alt="" style={{ y: bgY }}
-            className="w-full h-full object-cover object-[center_top] md:object-[55%_center] absolute inset-0" />
-          {/* Mobile: only a bottom fade so driver shows clearly at top */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-[#060606] md:hidden" />
-          {/* Desktop: left-to-right gradient to keep text readable */}
+          {/* Mobile image: ImageKit auto-crops to portrait, focusing on the subject */}
+          <motion.img
+            src={isMobile ? BG_IMG_MOBILE : BG_IMG}
+            alt=""
+            style={{ y: bgY }}
+            className="w-full h-full object-cover object-center absolute inset-0"
+          />
+          {/* Mobile gradient: dark top (nav), clear middle (driver), dark bottom (text) */}
+          <div
+            className="absolute inset-0 md:hidden"
+            style={{ background: "linear-gradient(to bottom, rgba(6,6,6,0.65) 0%, rgba(6,6,6,0.1) 18%, transparent 35%, rgba(6,6,6,0.55) 62%, rgba(6,6,6,0.92) 80%, rgba(6,6,6,1) 100%)" }}
+          />
+          {/* Desktop: left-to-right + top gradients to keep text readable */}
           <div className="absolute inset-0 hidden md:block bg-gradient-to-r from-[#060606] via-[#060606]/80 to-[#060606]/10" />
           <div className="absolute inset-0 hidden md:block bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/50" />
         </div>

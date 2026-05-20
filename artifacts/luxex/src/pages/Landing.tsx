@@ -432,7 +432,7 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
       style={{ background: "#030303" }}
     >
       <motion.img
-        src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
+        src="/logo.png"
         alt="Luxex Executive Ride"
         initial={{ opacity: 0, y: 12, scale: 0.92 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -671,7 +671,7 @@ export default function Landing() {
         <div className="max-w-[1280px] mx-auto px-6 lg:px-12 flex items-center justify-between h-[88px] md:h-[96px]">
           <a href="#" className="flex items-center group">
             <motion.img
-              src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
+              src="/logo.png"
               alt="Luxex Executive Ride"
               whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.2 }}
@@ -1126,7 +1126,7 @@ export default function Landing() {
           <div className="flex flex-col lg:flex-row justify-between gap-12 mb-12">
             <div className="max-w-[200px]">
               <img
-                src="https://ik.imagekit.io/xnfnvsnut/1001351366-removebg-preview.png"
+                src="/logo.png"
                 alt="Luxex Executive Ride"
                 className="h-20 md:h-24 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(201,168,76,0.35)]"
               />

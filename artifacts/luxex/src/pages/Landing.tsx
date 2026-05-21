@@ -394,6 +394,43 @@ function TrustBadges() {
   );
 }
 
+function FloatingParticles() {
+  const particles = [
+    { x: "8%",  delay: 0,   dur: 9,   size: 2,   op: 0.22 },
+    { x: "20%", delay: 1.4, dur: 11,  size: 1.5, op: 0.16 },
+    { x: "33%", delay: 0.7, dur: 8,   size: 2.5, op: 0.20 },
+    { x: "47%", delay: 2.1, dur: 10,  size: 1.5, op: 0.14 },
+    { x: "60%", delay: 0.3, dur: 12,  size: 2,   op: 0.18 },
+    { x: "72%", delay: 1.9, dur: 9.5, size: 2.5, op: 0.16 },
+    { x: "83%", delay: 0.8, dur: 10,  size: 1.5, op: 0.20 },
+    { x: "91%", delay: 2.7, dur: 8,   size: 2,   op: 0.14 },
+  ];
+  return (
+    <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{ left: p.x, bottom: "18%", width: p.size, height: p.size, background: YELLOW }}
+          animate={{ y: [0, -100, -220], opacity: [0, p.op, 0] }}
+          transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: "easeOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HeroScanLine() {
+  return (
+    <motion.div
+      className="absolute left-0 right-0 h-px z-[2] pointer-events-none"
+      style={{ bottom: 0, background: `linear-gradient(to right, transparent 0%, ${YELLOW} 40%, rgba(240,208,96,0.8) 50%, ${YELLOW} 60%, transparent 100%)` }}
+      animate={{ y: [0, -500, -1100], opacity: [0, 0.55, 0] }}
+      transition={{ duration: 2.2, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
+    />
+  );
+}
+
 function WhatsAppFloat() {
   return (
     <motion.a
@@ -755,14 +792,19 @@ export default function Landing() {
             style={{ y: bgY }}
             className="w-full h-full object-cover object-[60%_center] md:object-center absolute inset-0"
           />
-          {/* Mobile gradient: dark top (nav), clear middle (driver), dark bottom (text) */}
+          {/* Mobile gradient: strong dark vignette + readable bottom */}
           <div
             className="absolute inset-0 md:hidden"
-            style={{ background: "linear-gradient(to bottom, rgba(6,6,6,0.65) 0%, rgba(6,6,6,0.1) 18%, transparent 35%, rgba(6,6,6,0.55) 62%, rgba(6,6,6,0.92) 80%, rgba(6,6,6,1) 100%)" }}
+            style={{ background: "linear-gradient(to bottom, rgba(6,6,6,0.82) 0%, rgba(6,6,6,0.22) 22%, rgba(6,6,6,0.08) 42%, rgba(6,6,6,0.65) 65%, rgba(6,6,6,0.96) 83%, rgba(6,6,6,1) 100%)" }}
           />
-          {/* Desktop: left-to-right + top gradients to keep text readable */}
-          <div className="absolute inset-0 hidden md:block bg-gradient-to-r from-[#060606] via-[#060606]/80 to-[#060606]/10" />
-          <div className="absolute inset-0 hidden md:block bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/50" />
+          {/* Desktop: left-to-right + top + vignette gradients */}
+          <div className="absolute inset-0 hidden md:block bg-gradient-to-r from-[#060606] via-[#060606]/85 to-[#060606]/5" />
+          <div className="absolute inset-0 hidden md:block bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/55" />
+          <div className="absolute inset-0 hidden md:block" style={{ background: "radial-gradient(ellipse at 65% 50%, transparent 25%, rgba(6,6,6,0.55) 70%, rgba(6,6,6,0.88) 100%)" }} />
+          {/* Shared bottom dark fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-40" style={{ background: "linear-gradient(to top, rgba(6,6,6,1) 0%, transparent 100%)" }} />
+          <FloatingParticles />
+          <HeroScanLine />
         </div>
 
         {/* Left: headline + CTA — bottom on mobile, centered on desktop */}
@@ -983,6 +1025,8 @@ export default function Landing() {
             {fleet.map((v, i) => (
               <Reveal key={i} delay={i * 0.1}>
                 <motion.div whileHover="hovered" initial="rest" animate="rest"
+                  variants={{ rest: { boxShadow: "inset 0 0 0 0px rgba(201,168,76,0), 0 0 0px rgba(201,168,76,0)" }, hovered: { boxShadow: "inset 0 0 0 1px rgba(201,168,76,0.38), 0 0 45px rgba(201,168,76,0.08)" } }}
+                  transition={{ duration: 0.4 }}
                   className="bg-[#060606] group relative overflow-hidden flex flex-col cursor-pointer">
                   <motion.div className="absolute inset-0 z-0 origin-bottom"
                     variants={{ rest: { scaleY: 0 }, hovered: { scaleY: 1 } }}
@@ -991,13 +1035,15 @@ export default function Landing() {
 
                   {/* Image — solid black bg, object-contain so the full car is always visible */}
                   <div className="relative w-full overflow-hidden bg-black flex items-center justify-center" style={{ aspectRatio: "16/10" }}>
-                    <img
+                    <motion.img
                       src={v.img}
                       alt={v.type}
                       loading={i < 2 ? "eager" : "lazy"}
                       className="w-full h-full object-contain object-center"
+                      variants={{ rest: { scale: 1 }, hovered: { scale: 1.06 } }}
+                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                       onError={(e) => {
-                        const el = e.currentTarget;
+                        const el = e.currentTarget as HTMLImageElement;
                         el.src = v.fallbackImg;
                         el.className = "w-full h-full object-cover object-center";
                       }}
@@ -1074,12 +1120,17 @@ export default function Landing() {
                   { value: "100%", label: "On-time Rate" },
                   { value: "4.9★", label: "Average Rating" },
                 ].map((stat, i) => (
-                  <div key={i} className="border border-white/[0.07] p-7 group hover:border-[#C9A84C]/30 transition-colors duration-300">
-                    <p className="font-black text-3xl mb-2 group-hover:text-[#C9A84C] transition-colors duration-300" style={{ color: i === 0 ? YELLOW : "white" }}>
+                  <motion.div key={i} className="border border-white/[0.07] p-7 group cursor-default"
+                    whileHover={{ borderColor: "rgba(201,168,76,0.38)", boxShadow: "0 0 40px rgba(201,168,76,0.07)" }}
+                    transition={{ duration: 0.35 }}>
+                    <motion.p className="font-black text-3xl mb-2"
+                      style={{ color: i === 0 ? YELLOW : "white" }}
+                      whileHover={{ color: YELLOW }}
+                      transition={{ duration: 0.25 }}>
                       {stat.value}
-                    </p>
+                    </motion.p>
                     <p className="text-[11px] tracking-widest uppercase text-white/35 font-semibold">{stat.label}</p>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </Reveal>
@@ -1090,8 +1141,10 @@ export default function Landing() {
       {/* ── CTA ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img src={BG_IMG} alt="" className="w-full h-full object-cover object-center opacity-10" />
-          <div className="absolute inset-0 bg-[#060606]/85" />
+          <img src={BG_IMG} alt="" className="w-full h-full object-cover object-[60%_center] opacity-[0.14]" />
+          <div className="absolute inset-0 bg-[#060606]/80" />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 110%, rgba(201,168,76,0.09) 0%, transparent 65%)" }} />
+          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: GOLD_GRADIENT, opacity: 0.25 }} />
         </div>
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-20 py-28 md:py-40">
           <Reveal>

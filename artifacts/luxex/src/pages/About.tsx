@@ -71,11 +71,11 @@ export default function About() {
 
       {/* Nav */}
       <header className="fixed inset-x-0 top-0 z-50 bg-[#060606]/95 backdrop-blur-md border-b border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto px-6 lg:px-12 h-[80px] flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-12 h-[110px] md:h-[90px] flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
             <ArrowLeft className="w-4 h-4 text-white/30 group-hover:text-white transition-colors" />
             <img src="/logo.png"
-              alt="LuxEx" className="h-24 w-auto object-contain" />
+              alt="LuxEx" className="h-28 md:h-28 w-auto object-contain" />
           </a>
           <BookingSystem triggerClassName="text-[10px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 btn-gold text-black transition-colors rounded-none" />
         </div>

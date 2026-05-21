@@ -36,7 +36,7 @@ export default function AdminLogin() {
           <img
             src="/logo.png"
             alt="Luxex Executive Ride"
-            className="h-12 w-auto object-contain drop-shadow-[0_0_14px_rgba(242,225,71,0.3)]"
+            className="h-20 w-auto object-contain drop-shadow-[0_0_14px_rgba(242,225,71,0.3)]"
           />
         </a>
       </header>

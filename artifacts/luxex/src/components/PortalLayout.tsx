@@ -32,7 +32,7 @@ export function PortalLayout({ user, children, onLogout }: Props) {
     <nav className="flex flex-col h-full" style={{ background: "#060606", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
       <div className="px-5 pt-6 pb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <a href="/">
-          <img src={LOGO} alt="Luxex" className="h-16 w-auto object-contain" />
+          <img src={LOGO} alt="Luxex" className="h-20 w-auto object-contain" />
         </a>
         <div className="mt-5 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-black text-sm font-black shrink-0"

@@ -753,7 +753,7 @@ export default function Landing() {
             src={isMobile ? BG_IMG_MOBILE : BG_IMG}
             alt=""
             style={{ y: bgY }}
-            className="w-full h-full object-cover object-center absolute inset-0"
+            className="w-full h-full object-cover object-[60%_center] md:object-center absolute inset-0"
           />
           {/* Mobile gradient: dark top (nav), clear middle (driver), dark bottom (text) */}
           <div

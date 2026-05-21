@@ -437,7 +437,7 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
         initial={{ opacity: 0, y: 12, scale: 0.92 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="h-28 md:h-36 w-auto object-contain mb-14"
+        className="h-36 md:h-52 w-auto object-contain mb-14"
         style={{ filter: "drop-shadow(0 0 36px rgba(201,168,76,0.45))" }}
       />
       <div className="w-44 h-[2px] bg-white/5 overflow-hidden">
@@ -675,7 +675,7 @@ export default function Landing() {
               alt="Luxex Executive Ride"
               whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.2 }}
-              className="h-24 sm:h-28 md:h-28 w-auto object-contain drop-shadow-[0_0_22px_rgba(201,168,76,0.45)]"
+              className="h-28 sm:h-36 md:h-40 w-auto object-contain drop-shadow-[0_0_22px_rgba(201,168,76,0.45)]"
             />
           </a>
 
@@ -1128,7 +1128,7 @@ export default function Landing() {
               <img
                 src="/logo.png"
                 alt="Luxex Executive Ride"
-                className="h-20 md:h-24 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(201,168,76,0.35)]"
+                className="h-24 md:h-32 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(201,168,76,0.35)]"
               />
               <p className="text-sm text-white/80 font-light leading-relaxed">
                 Premium executive transportation. New York, New Jersey, Connecticut & Pennsylvania.

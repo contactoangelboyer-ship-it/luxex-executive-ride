@@ -33,7 +33,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <img
             src="/logo.png"
             alt="Luxex Executive Ride"
-            className="h-16 w-auto object-contain drop-shadow-[0_0_14px_rgba(201,168,76,0.3)]"
+            className="h-20 w-auto object-contain drop-shadow-[0_0_14px_rgba(201,168,76,0.3)]"
           />
           <p className="text-[9px] tracking-widest uppercase text-white/25">Admin Panel</p>
         </div>

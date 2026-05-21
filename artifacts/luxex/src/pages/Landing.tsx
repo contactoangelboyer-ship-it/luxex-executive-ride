@@ -19,8 +19,8 @@ import { BookingSystem } from "@/components/BookingSystem";
 
 const YELLOW = "#C9A84C";
 const GOLD_GRADIENT = "linear-gradient(135deg, #8B6914 0%, #C9A84C 30%, #F0D060 55%, #D4AF37 80%, #B8860B 100%)";
-const BG_IMG = "https://ik.imagekit.io/xnfnvsnut/12b7a4f0-708e-41f4-a2ec-82db1e5dc1ab.png?updatedAt=1775643651934";
-const BG_IMG_MOBILE = "https://ik.imagekit.io/xnfnvsnut/tr:w-700,h-1100,fo-face,cm-extract/12b7a4f0-708e-41f4-a2ec-82db1e5dc1ab.png";
+const BG_IMG = "/hero.jpg";
+const BG_IMG_MOBILE = "/hero.jpg";
 
 function CustomCursor() {
   const cursorX = useMotionValue(-100);
@@ -629,7 +629,7 @@ export default function Landing() {
   const fleet = [
     {
       type: "Executive Sedan",
-      models: "2025 Mercedes-Benz S580 · BMW 7 Series · Genesis G90",
+      models: "Mercedes-Benz S580 · BMW 7 Series · Genesis G90",
       pax: "Up to 3 Passengers",
       lug: "3 Bags",
       tag: "Most Popular",
@@ -638,7 +638,7 @@ export default function Landing() {
     },
     {
       type: "Luxury SUV",
-      models: "2025 Cadillac Escalade · Lincoln Navigator · GMC Yukon Denali",
+      models: "Cadillac Escalade Black · Lincoln Navigator · GMC Yukon Denali",
       pax: "Up to 6 Passengers",
       lug: "6 Bags",
       tag: "",
@@ -647,7 +647,7 @@ export default function Landing() {
     },
     {
       type: "Premium Van",
-      models: "2026 Mercedes Sprinter Executive",
+      models: "Mercedes Sprinter Executive",
       pax: "Up to 14 Passengers",
       lug: "10 Bags",
       tag: "Groups",

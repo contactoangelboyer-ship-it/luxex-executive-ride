@@ -75,7 +75,7 @@ export default function About() {
           <a href="/" className="flex items-center gap-3 group">
             <ArrowLeft className="w-4 h-4 text-white/30 group-hover:text-white transition-colors" />
             <img src="/logo.png"
-              alt="LuxEx" className="h-16 w-auto object-contain" />
+              alt="LuxEx" className="h-24 w-auto object-contain" />
           </a>
           <BookingSystem triggerClassName="text-[10px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 btn-gold text-black transition-colors rounded-none" />
         </div>

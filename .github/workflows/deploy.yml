@@ -6,25 +6,40 @@ on:
       - main
 
 jobs:
-  deploy:
+  deploy-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 10
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-
-      - name: Deploy to Vercel (production)
+      - name: Deploy frontend to Vercel
         run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
           VERCEL_PROJECT_ID: prj_R5zpW05LrUfbCRGwm5opdtAqCLgw
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Deploy API server to Vercel
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
+          VERCEL_PROJECT_ID: prj_kFOCTZ0vseLUbWraPnV6bw7PmlpG

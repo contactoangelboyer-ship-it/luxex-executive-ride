@@ -20,6 +20,8 @@ function generatePin(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const DEFAULT_ADMIN_PASSWORD = "LuxEx2026!";
+
 let defaultsInitialized = false;
 async function ensureDefaults(): Promise<void> {
   if (defaultsInitialized) return;
@@ -29,10 +31,12 @@ async function ensureDefaults(): Promise<void> {
     if (!existing.length) {
       await db.insert(adminUsers).values({
         username: "admin",
-        passwordHash: hashPassword("luxex2024!"),
+        passwordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
       });
     }
-  } catch {}
+  } catch {
+    // DB may not be ready yet; login handler will surface a clean error
+  }
   try {
     const existing = await db.select().from(pricingConfig).limit(1);
     if (!existing.length) {
@@ -43,26 +47,76 @@ async function ensureDefaults(): Promise<void> {
         { vehicleType: "limo",  baseRate: 200, perMile: 6.50, hourlyRate: 200, minMiles: 20, airportFee: 65, afterHoursPct: 30, weekendPct: 20 },
       ]);
     }
-  } catch {}
+  } catch {
+    // Pricing defaults are non-critical; continue
+  }
 }
 
 router.post("/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body ?? {};
     if (!username || !password) {
-      res.status(400).json({ error: "username and password required" });
+      res.status(400).json({ error: "Username and password are required" });
       return;
     }
+
+    // ── 1. ADMIN_PASSWORD env var override (emergency access) ────────────────
+    const envPassword = process.env.ADMIN_PASSWORD;
+    if (envPassword && username === "admin" && password === envPassword) {
+      const token = signToken({ id: 0, username: "admin", role: "admin" });
+      res.json({ token });
+      return;
+    }
+
+    // ── 2. Ensure defaults are seeded ────────────────────────────────────────
     await ensureDefaults().catch(() => {});
-    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
-    if (!user || user.passwordHash !== hashPassword(password)) {
-      res.status(401).json({ error: "Invalid credentials" });
+
+    // ── 3. DB lookup ─────────────────────────────────────────────────────────
+    let users: typeof adminUsers.$inferSelect[] = [];
+    try {
+      users = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    } catch {
+      res.status(503).json({ error: "Database unavailable. Please try again shortly." });
       return;
     }
+
+    const [user] = users;
+    if (!user || user.passwordHash !== hashPassword(password)) {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+
     const token = signToken({ id: user.id, username: user.username, role: "admin" });
     res.json({ token });
-  } catch (err: any) {
-    res.status(500).json({ error: err?.message ?? "Login failed" });
+  } catch {
+    res.status(500).json({ error: "Login failed. Please try again." });
+  }
+});
+
+// ── Password reset (requires ADMIN_RESET_SECRET env var) ─────────────────────
+router.post("/auth/reset-password", async (req, res) => {
+  try {
+    const { secret, username, newPassword } = req.body ?? {};
+    const resetSecret = process.env.ADMIN_RESET_SECRET;
+    if (!resetSecret || secret !== resetSecret) {
+      res.status(403).json({ error: "Invalid reset secret" });
+      return;
+    }
+    if (!username || !newPassword || String(newPassword).length < 8) {
+      res.status(400).json({ error: "username and newPassword (min 8 chars) are required" });
+      return;
+    }
+    const hash = hashPassword(String(newPassword));
+    const existing = await db.select().from(adminUsers).where(eq(adminUsers.username, String(username)));
+    if (existing.length) {
+      await db.update(adminUsers).set({ passwordHash: hash }).where(eq(adminUsers.username, String(username)));
+      res.json({ ok: true, message: `Password updated for ${username}` });
+    } else {
+      await db.insert(adminUsers).values({ username: String(username), passwordHash: hash });
+      res.json({ ok: true, message: `Admin user ${username} created` });
+    }
+  } catch {
+    res.status(500).json({ error: "Reset failed" });
   }
 });
 

@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
-const SECRET = process.env.SESSION_SECRET ?? "luxex-admin-secret-2026";
+const SECRET = process.env.ADMIN_JWT_SECRET ?? "luxex-admin-jwt-stable-2026";
 
 export function signToken(payload: object): string {
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
@@ -130,16 +130,44 @@ export default function Bookings() {
   const [createError, setCreateError] = useState("");
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pricing, setPricing] = useState<any[]>([]);
 
   const load = () => {
     setLoading(true);
     const params: Record<string, string> = {};
     if (statusFilter) params.status = statusFilter;
-    Promise.all([adminApi.bookings.list(params), adminApi.drivers.list()])
-      .then(([b, d]) => { setBookings(b); setDrivers(d); })
+    Promise.all([adminApi.bookings.list(params), adminApi.drivers.list(), adminApi.pricing.list()])
+      .then(([b, d, p]) => { setBookings(b); setDrivers(d); setPricing(p); })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
+
+  const autoFillPrice = useCallback((vehicleType: string, service: string, hours: string, form: typeof EMPTY_FORM) => {
+    const p = pricing.find((row: any) => row.vehicleType === vehicleType);
+    if (!p) return;
+    let base = 0;
+    let mileage = 0;
+    let surcharges = Number(form.surchargesAmount) || 0;
+    if (service === "hourly") {
+      base = p.hourlyRate * (Number(hours) || 1);
+      mileage = 0;
+    } else {
+      base = p.baseRate;
+      mileage = parseFloat((p.perMile * p.minMiles).toFixed(2));
+    }
+    if (service === "airport") {
+      surcharges = p.airportFee;
+    } else if (service !== "hourly") {
+      surcharges = 0;
+    }
+    setCreateForm(prev => ({
+      ...prev,
+      baseAmount: String(base),
+      mileageAmount: String(mileage),
+      surchargesAmount: String(surcharges),
+      totalAmount: "",
+    }));
+  }, [pricing]);
 
   useEffect(() => { load(); }, [statusFilter]);
 
@@ -231,7 +259,29 @@ export default function Bookings() {
   };
 
   const setField = (key: keyof typeof EMPTY_FORM, value: any) => {
-    setCreateForm(prev => ({ ...prev, [key]: value }));
+    setCreateForm(prev => {
+      const next = { ...prev, [key]: value };
+      if ((key === "vehicleType" || key === "service" || key === "hours") && pricing.length > 0) {
+        const p = pricing.find((row: any) => row.vehicleType === next.vehicleType);
+        if (p) {
+          let base = 0;
+          let mileage = 0;
+          let surcharges = 0;
+          if (next.service === "hourly") {
+            base = p.hourlyRate * (Number(next.hours) || 1);
+            mileage = 0;
+          } else {
+            base = p.baseRate;
+            mileage = parseFloat((p.perMile * p.minMiles).toFixed(2));
+          }
+          if (next.service === "airport") {
+            surcharges = p.airportFee;
+          }
+          return { ...next, baseAmount: String(base), mileageAmount: String(mileage), surchargesAmount: String(surcharges), totalAmount: "" };
+        }
+      }
+      return next;
+    });
   };
 
   const computedTotal = () => {
@@ -505,7 +555,29 @@ export default function Bookings() {
 
                 {/* Pricing */}
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Pricing</p>
+                  <div className="flex items-center justify-between mb-3 border-b border-white/[0.04] pb-2">
+                    <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold">Pricing</p>
+                    {pricing.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => autoFillPrice(createForm.vehicleType, createForm.service, createForm.hours, createForm)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase border border-[#F2E147]/30 text-[#F2E147]/70 hover:text-[#F2E147] hover:border-[#F2E147]/60 transition-colors"
+                      >
+                        <Zap className="w-3 h-3" /> Auto-fill Price
+                      </button>
+                    )}
+                  </div>
+                  {pricing.length > 0 && createForm.vehicleType && (
+                    <div className="mb-3 px-3 py-2 bg-[#F2E147]/5 border border-[#F2E147]/10 text-[10px] text-[#F2E147]/60">
+                      {(() => {
+                        const p = pricing.find((row: any) => row.vehicleType === createForm.vehicleType);
+                        if (!p) return null;
+                        return createForm.service === "hourly"
+                          ? `Hourly rate: $${p.hourlyRate}/hr · Price updates automatically with hours`
+                          : `Base: $${p.baseRate} · Min. mileage: ${p.minMiles} mi × $${p.perMile}/mi${createForm.service === "airport" ? ` · Airport fee: $${p.airportFee}` : ""}`;
+                      })()}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                     <Field label="Base ($)">
                       <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"

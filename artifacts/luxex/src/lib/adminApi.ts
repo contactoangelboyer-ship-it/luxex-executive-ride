@@ -19,7 +19,6 @@ const BASE = "/api/admin";
       method, headers: headers(), body: body ? JSON.stringify(body) : undefined,
     });
     if (res.status === 401) {
-      localStorage.removeItem("luxex_admin_token");
       window.location.href = getLoginPath();
       throw new Error("Unauthorized");
     }

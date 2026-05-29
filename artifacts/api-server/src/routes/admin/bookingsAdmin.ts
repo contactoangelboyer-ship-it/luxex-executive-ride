@@ -83,6 +83,19 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
   }
 });
 
+router.post("/bookings/:id/resend-confirmation", requireAdmin, async (req, res) => {
+  try {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id)));
+    if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
+    if (!booking.passengerEmail) { res.status(400).json({ error: "Booking has no passenger email" }); return; }
+    await sendCustomerConfirmation(booking);
+    res.json({ ok: true, to: booking.passengerEmail });
+  } catch (err) {
+    logger.error({ err }, "Failed to resend confirmation email");
+    res.status(500).json({ error: "Failed to send email" });
+  }
+});
+
 router.post("/bookings", requireAdmin, async (req, res) => {
   try {
     const body = req.body;

@@ -172,11 +172,15 @@ router.post("/bookings", async (req, res) => {
       distanceMiles:    body.distanceMiles ?? null,
     }).returning();
 
-    res.status(201).json(booking);
+    // Await emails BEFORE sending the response.
+    // In Vercel serverless the function is terminated immediately after res.json(),
+    // so fire-and-forget work launched after the response never completes.
+    await Promise.allSettled([
+      sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (public)")),
+      sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (public)")),
+    ]);
 
-    // Fire-and-forget emails — never block the booking response
-    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (public)"));
-    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (public)"));
+    res.status(201).json(booking);
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to create booking" });
   }

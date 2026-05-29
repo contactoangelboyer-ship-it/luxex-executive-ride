@@ -145,10 +145,11 @@ export default function Bookings() {
   const autoFillPrice = useCallback((vehicleType: string, service: string, hours: string, form: typeof EMPTY_FORM) => {
     const p = pricing.find((row: any) => row.vehicleType === vehicleType);
     if (!p) return;
+    const isHourly = service === "hourly";
     let base = 0;
     let mileage = 0;
-    let surcharges = Number(form.surchargesAmount) || 0;
-    if (service === "hourly") {
+    let surcharges = 0;
+    if (isHourly) {
       base = p.hourlyRate * (Number(hours) || 1);
       mileage = 0;
     } else {
@@ -157,14 +158,29 @@ export default function Bookings() {
     }
     if (service === "airport") {
       surcharges = p.airportFee;
-    } else if (service !== "hourly") {
-      surcharges = 0;
     }
+    // After-hours surcharge (22:00–05:59)
+    if (!isHourly && form.time) {
+      const hr = parseInt(form.time.split(":")[0]);
+      if (hr >= 22 || hr < 6) {
+        surcharges = parseFloat((surcharges + (base + mileage) * ((p.afterHoursPct ?? 25) / 100)).toFixed(2));
+      }
+    }
+    // Weekend surcharge
+    if (!isHourly && form.date) {
+      const dow = new Date(form.date + "T12:00:00").getDay();
+      if (dow === 0 || dow === 6) {
+        surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
+      }
+    }
+    // Estimated tolls based on minimum trip miles
+    const tolls = !isHourly ? (p.minMiles > 40 ? 32 : p.minMiles > 15 ? 20 : 12) : 0;
     setCreateForm(prev => ({
       ...prev,
       baseAmount: String(base),
       mileageAmount: String(mileage),
       surchargesAmount: String(surcharges),
+      tollsAmount: String(tolls),
       totalAmount: "",
     }));
   }, [pricing]);
@@ -261,13 +277,14 @@ export default function Bookings() {
   const setField = (key: keyof typeof EMPTY_FORM, value: any) => {
     setCreateForm(prev => {
       const next = { ...prev, [key]: value };
-      if ((key === "vehicleType" || key === "service" || key === "hours") && pricing.length > 0) {
+      if ((key === "vehicleType" || key === "service" || key === "hours" || key === "date" || key === "time") && pricing.length > 0) {
         const p = pricing.find((row: any) => row.vehicleType === next.vehicleType);
         if (p) {
+          const isHourly = next.service === "hourly";
           let base = 0;
           let mileage = 0;
           let surcharges = 0;
-          if (next.service === "hourly") {
+          if (isHourly) {
             base = p.hourlyRate * (Number(next.hours) || 1);
             mileage = 0;
           } else {
@@ -277,7 +294,23 @@ export default function Bookings() {
           if (next.service === "airport") {
             surcharges = p.airportFee;
           }
-          return { ...next, baseAmount: String(base), mileageAmount: String(mileage), surchargesAmount: String(surcharges), totalAmount: "" };
+          // After-hours surcharge (22:00–05:59)
+          if (!isHourly && next.time) {
+            const hr = parseInt(next.time.split(":")[0]);
+            if (hr >= 22 || hr < 6) {
+              surcharges = parseFloat((surcharges + (base + mileage) * ((p.afterHoursPct ?? 25) / 100)).toFixed(2));
+            }
+          }
+          // Weekend surcharge
+          if (!isHourly && next.date) {
+            const dow = new Date(next.date + "T12:00:00").getDay();
+            if (dow === 0 || dow === 6) {
+              surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
+            }
+          }
+          // Estimated tolls based on minimum trip miles
+          const tolls = !isHourly ? (p.minMiles > 40 ? 32 : p.minMiles > 15 ? 20 : 12) : 0;
+          return { ...next, baseAmount: String(base), mileageAmount: String(mileage), surchargesAmount: String(surcharges), tollsAmount: String(tolls), totalAmount: "" };
         }
       }
       return next;

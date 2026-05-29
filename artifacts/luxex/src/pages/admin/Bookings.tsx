@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap, Navigation2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
 const YELLOW = "#F2E147";
 
-function PlacesInput({ value, onChange, required, placeholder, className }: {
-  value: string; onChange: (val: string) => void;
+function PlacesInput({ value, onChange, onPlaceSelect, required, placeholder, className }: {
+  value: string;
+  onChange: (val: string) => void;
+  onPlaceSelect?: (place: { address: string; lat: number; lon: number }) => void;
   required?: boolean; placeholder?: string; className?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,11 +21,15 @@ function PlacesInput({ value, onChange, required, placeholder, className }: {
     if (!goog?.maps?.places || !inputRef.current) return;
     acRef.current = new goog.maps.places.Autocomplete(inputRef.current, {
       componentRestrictions: { country: "us" },
-      fields: ["formatted_address", "name"],
+      fields: ["formatted_address", "name", "geometry"],
     });
     const listener = acRef.current.addListener("place_changed", () => {
       const place = acRef.current.getPlace();
-      onChange(place.formatted_address ?? place.name ?? "");
+      const address = place.formatted_address ?? place.name ?? "";
+      onChange(address);
+      if (onPlaceSelect && place.geometry?.location) {
+        onPlaceSelect({ address, lat: place.geometry.location.lat(), lon: place.geometry.location.lng() });
+      }
     });
     return () => { goog.maps.event.removeListener(listener); };
   }, []);
@@ -71,7 +77,11 @@ const FLIGHT_TYPES = ["arrival", "departure"];
 const EMPTY_FORM = {
   service: "airport",
   pickupAddress: "",
+  pickupLat: null as number | null,
+  pickupLon: null as number | null,
   dropoffAddress: "",
+  dropoffLat: null as number | null,
+  dropoffLon: null as number | null,
   date: "",
   time: "",
   passengers: 1,
@@ -131,6 +141,8 @@ export default function Bookings() {
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pricing, setPricing] = useState<any[]>([]);
+  const [routeInfo, setRouteInfo] = useState<{ distanceMiles: number; durationMin: number } | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -186,6 +198,42 @@ export default function Bookings() {
   }, [pricing]);
 
   useEffect(() => { load(); }, [statusFilter]);
+
+  // Auto-calculate route when both pickup and dropoff coords are available
+  useEffect(() => {
+    const { pickupLat, pickupLon, dropoffLat, dropoffLon } = createForm;
+    if (!pickupLat || !pickupLon || !dropoffLat || !dropoffLon) {
+      setRouteInfo(null);
+      return;
+    }
+    const goog = (window as any).google;
+    if (!goog?.maps) return;
+    setRouteLoading(true);
+    const svc = new goog.maps.DirectionsService();
+    svc.route(
+      { origin: { lat: pickupLat, lng: pickupLon }, destination: { lat: dropoffLat, lng: dropoffLon }, travelMode: goog.maps.TravelMode.DRIVING },
+      (result: any, status: string) => {
+        setRouteLoading(false);
+        if (status !== "OK" || !result?.routes?.[0]) { setRouteInfo(null); return; }
+        const route = result.routes[0];
+        let distanceMeters = 0, durationSeconds = 0;
+        route.legs.forEach((leg: any) => { distanceMeters += leg.distance.value; durationSeconds += leg.duration.value; });
+        const distanceMiles = parseFloat(((distanceMeters / 1609.344) * 1.05).toFixed(2));
+        const durationMin = Math.round(durationSeconds / 60);
+        setRouteInfo({ distanceMiles, durationMin });
+        // Recalculate mileage and tolls with real distance
+        setCreateForm(prev => {
+          if (prev.service === "hourly") return prev;
+          const p = pricing.find((row: any) => row.vehicleType === prev.vehicleType);
+          if (!p) return prev;
+          const actualMiles = Math.max(distanceMiles, p.minMiles);
+          const mileage = parseFloat((actualMiles * p.perMile).toFixed(2));
+          const tolls = distanceMiles > 40 ? 32 : distanceMiles > 15 ? 20 : 12;
+          return { ...prev, mileageAmount: String(mileage), tollsAmount: String(tolls), totalAmount: "" };
+        });
+      }
+    );
+  }, [createForm.pickupLat, createForm.pickupLon, createForm.dropoffLat, createForm.dropoffLon]);
 
   const filtered = bookings.filter(b => {
     if (!search) return true;
@@ -334,7 +382,11 @@ export default function Bookings() {
       const payload: Record<string, any> = {
         service: createForm.service,
         pickupAddress: createForm.pickupAddress,
+        pickupLat: createForm.pickupLat ?? null,
+        pickupLon: createForm.pickupLon ?? null,
         dropoffAddress: createForm.dropoffAddress || null,
+        dropoffLat: createForm.dropoffLat ?? null,
+        dropoffLon: createForm.dropoffLon ?? null,
         date: createForm.date,
         time: createForm.time,
         passengers: Number(createForm.passengers),
@@ -358,11 +410,13 @@ export default function Bookings() {
         promoDiscount: parseFloat(String(createForm.promoDiscount)) || 0,
         status: createForm.status,
         driverId: createForm.driverId !== "" ? Number(createForm.driverId) : null,
+        distanceMiles: routeInfo?.distanceMiles ?? null,
       };
       const created = await adminApi.bookings.create(payload);
       setBookings(prev => [created, ...prev]);
       setShowCreate(false);
       setCreateForm(EMPTY_FORM);
+      setRouteInfo(null);
     } catch (e: any) {
       setCreateError(e?.message ?? "Failed to create booking. Please try again.");
     } finally {
@@ -379,7 +433,7 @@ export default function Bookings() {
             <p className="text-white/25 text-xs">{filtered.length} results</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { setShowCreate(true); setCreateError(""); setCreateForm(EMPTY_FORM); }}
+            <button onClick={() => { setShowCreate(true); setCreateError(""); setCreateForm(EMPTY_FORM); setRouteInfo(null); }}
               className="flex items-center gap-2 px-3 py-2 text-[10px] font-bold tracking-widest uppercase text-black"
               style={{ background: YELLOW }}>
               <Plus className="w-3.5 h-3.5" /> New Booking
@@ -537,13 +591,43 @@ export default function Bookings() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <Field label="Pickup Address *">
                       <PlacesInput required className={inputCls} placeholder="123 Main St, Newark NJ"
-                        value={createForm.pickupAddress} onChange={v => setField("pickupAddress", v)} />
+                        value={createForm.pickupAddress}
+                        onChange={v => setCreateForm(prev => ({ ...prev, pickupAddress: v, pickupLat: null, pickupLon: null }))}
+                        onPlaceSelect={p => setCreateForm(prev => ({ ...prev, pickupAddress: p.address, pickupLat: p.lat, pickupLon: p.lon }))}
+                      />
                     </Field>
                     <Field label="Drop-off Address">
                       <PlacesInput className={inputCls} placeholder="EWR Airport — Terminal A"
-                        value={createForm.dropoffAddress} onChange={v => setField("dropoffAddress", v)} />
+                        value={createForm.dropoffAddress}
+                        onChange={v => setCreateForm(prev => ({ ...prev, dropoffAddress: v, dropoffLat: null, dropoffLon: null }))}
+                        onPlaceSelect={p => setCreateForm(prev => ({ ...prev, dropoffAddress: p.address, dropoffLat: p.lat, dropoffLon: p.lon }))}
+                      />
                     </Field>
                   </div>
+                  {/* Route info badge */}
+                  {(routeLoading || routeInfo) && createForm.service !== "hourly" && (
+                    <div className="flex items-center gap-4 px-3 py-2 bg-[#F2E147]/5 border border-[#F2E147]/15 mb-3">
+                      {routeLoading ? (
+                        <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Calculating route…
+                        </div>
+                      ) : routeInfo ? (
+                        <>
+                          <Navigation2 className="w-3.5 h-3.5 text-[#F2E147]/60 shrink-0" />
+                          <div className="text-center">
+                            <p className="font-black text-sm text-[#F2E147] leading-none">{routeInfo.distanceMiles.toFixed(1)}</p>
+                            <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold">miles</p>
+                          </div>
+                          <div className="w-px h-5 bg-white/10" />
+                          <div className="text-center">
+                            <p className="font-black text-sm text-white leading-none">{routeInfo.durationMin}</p>
+                            <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold">min</p>
+                          </div>
+                          <p className="text-[10px] text-white/25 ml-1">Mileage y peajes actualizados con distancia real</p>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <Field label="Vehicle">
                       <select className={selectCls} style={{ colorScheme: "dark" }}

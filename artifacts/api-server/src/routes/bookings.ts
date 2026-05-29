@@ -294,18 +294,22 @@ router.post("/bookings", async (req, res) => {
       additionalStops: stopsJson,
     }).returning();
 
+    // Await emails BEFORE sending the response.
+    // In Vercel serverless the function is terminated immediately after res.json(),
+    // so any fire-and-forget work launched after the response never completes.
+    // Promise.allSettled ensures a mailer error never blocks the booking response.
+    await Promise.allSettled([
+      sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed")),
+      sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed")),
+      promoCode
+        ? db.update(promotions)
+            .set({ usedCount: sql`${promotions.usedCount} + 1` })
+            .where(eq(promotions.code, String(promoCode).toUpperCase().trim()))
+            .catch((err) => logger.error({ err }, "[promo] Failed to increment usedCount"))
+        : Promise.resolve(),
+    ]);
+
     res.status(201).json({ booking, confirmationCode });
-
-    // Increment promo usage count if a promo code was applied
-    if (promoCode) {
-      db.update(promotions)
-        .set({ usedCount: sql`${promotions.usedCount} + 1` })
-        .where(eq(promotions.code, String(promoCode).toUpperCase().trim()))
-        .catch((err) => logger.error({ err }, "[promo] Failed to increment usedCount"));
-    }
-
-    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed"));
-    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed"));
   } catch (err) {
     logger.error({ err }, "Failed to create booking");
     res.status(500).json({ error: "Failed to create booking" });

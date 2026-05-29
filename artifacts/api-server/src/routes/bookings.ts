@@ -152,9 +152,10 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     }
     const [updated] = await db.update(bookings).set({ status: "cancelled", updatedAt: new Date() })
       .where(eq(bookings.id, id)).returning();
-    res.json(updated);
 
-    sendStatusUpdate(updated, "cancelled").catch((err) => logger.error({ err }, "[mailer] cancellation email failed"));
+    await sendStatusUpdate(updated, "cancelled").catch((err) => logger.error({ err }, "[mailer] cancellation email failed"));
+
+    res.json(updated);
   } catch (err) {
     logger.error({ err }, "Failed to cancel booking");
     res.status(500).json({ error: "Failed to cancel booking" });
@@ -203,21 +204,19 @@ router.patch("/bookings/:id/driver-status", async (req, res) => {
       .where(eq(bookings.id, id))
       .returning();
 
-    res.json(updated);
-
     const driverInfo = { name: driver.name, phone: driver.phone };
 
-    // Passenger email
-    if (status === "completed") {
-      sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"));
-    } else {
-      sendStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] driver-status email failed"));
-    }
+    // Await emails before responding (Vercel serverless requirement)
+    await Promise.allSettled([
+      status === "completed"
+        ? sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"))
+        : sendStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] driver-status email failed")),
+      status === "completed"
+        ? sendAdminStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] admin completed email failed"))
+        : Promise.resolve(),
+    ]);
 
-    // Admin email for every status change (completed included)
-    if (status === "completed") {
-      sendAdminStatusUpdate(updated, status, driverInfo).catch((err) => logger.error({ err }, "[mailer] admin completed email failed"));
-    }
+    res.json(updated);
   } catch (err) {
     logger.error({ err }, "Failed to update driver status");
     res.status(500).json({ error: "Failed to update status" });

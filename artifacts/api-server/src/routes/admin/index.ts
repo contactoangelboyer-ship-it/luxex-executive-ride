@@ -185,14 +185,16 @@ router.patch("/bookings/:id", async (req, res) => {
     }
     if (status !== undefined) updates.status = status;
     const [updated] = await db.update(bookings).set(updates as any).where(eq(bookings.id, id)).returning();
-    res.json(updated);
     const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
     const statusChanged = status !== undefined && status !== current.status;
+    const emailTasks: Promise<unknown>[] = [];
     if (driverChanged) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, Number(driverId)));
-      if (driver?.email) { sendDriverAssignment(updated, driver).catch(() => {}); }
+      if (driver?.email) { emailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
     }
-    if (statusChanged) { sendStatusUpdate(updated, status).catch(() => {}); }
+    if (statusChanged) { emailTasks.push(sendStatusUpdate(updated, status).catch(() => {})); }
+    await Promise.allSettled(emailTasks);
+    res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to update booking" });
   }
@@ -203,13 +205,16 @@ router.post("/bookings", async (req, res) => {
     const body = req.body;
     const code = "LX-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     const [booking] = await db.insert(bookings).values({ ...body, confirmationCode: code, status: body.status ?? "pending" }).returning();
-    res.status(201).json(booking);
-    sendCustomerConfirmation(booking).catch(() => {});
-    sendAdminNotification(booking).catch(() => {});
+    const createEmailTasks: Promise<unknown>[] = [
+      sendCustomerConfirmation(booking).catch(() => {}),
+      sendAdminNotification(booking).catch(() => {}),
+    ];
     if (booking.driverId) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, booking.driverId));
-      if (driver?.email) { sendDriverAssignment(booking, driver).catch(() => {}); }
+      if (driver?.email) { createEmailTasks.push(sendDriverAssignment(booking, driver).catch(() => {})); }
     }
+    await Promise.allSettled(createEmailTasks);
+    res.status(201).json(booking);
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to create booking" });
   }

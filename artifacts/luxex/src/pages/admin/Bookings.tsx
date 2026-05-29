@@ -889,7 +889,7 @@ export default function Bookings() {
                         className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 pl-7 pr-3 py-2.5 outline-none transition-colors"
                         placeholder={selected?.totalAmount?.toFixed(2) ?? "0.00"} />
                     </div>
-                    <p className="text-[10px] text-white/20 mt-1">Leave blank to keep original price. Current: {selected?.totalAmount?.toFixed(2) ?? "0.00"{"}"}</p>
+                    <p className="text-[10px] text-white/20 mt-1">Leave blank to keep original price. Current: {selected?.totalAmount?.toFixed(2) ?? "0.00"}</p>
                   </div>
 
                   <div>

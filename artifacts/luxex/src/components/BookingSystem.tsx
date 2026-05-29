@@ -737,7 +737,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                                     className="px-4 pb-3 pt-0 border-t border-[#C9A84C]/10 bg-[#C9A84C]/5">
                                     <PriceLine label={p.baseLabel} value={`$${p.base.toFixed(2)}`} />
-                                    {p.mileage > 0 && <PriceLine label={`${dist.toFixed(1)} mi × $${v.perMile}/mi`} value={`$${p.mileage.toFixed(2)}`} />}
+                                    {p.mileage > 0 && <PriceLine label={`${p.distanceMiles.toFixed(1)} mi × $${v.perMile}/mi`} value={`$${p.mileage.toFixed(2)}`} />}
                                     {p.stopsFee > 0 && <PriceLine label={`${validStops.length} stop${validStops.length > 1 ? "s" : ""} × $15`} value={`$${p.stopsFee.toFixed(2)}`} />}
                                     {p.airportFee > 0 && <PriceLine label="Airport fee" value={`$${p.airportFee.toFixed(2)}`} />}
                                     {p.afterHours > 0 && <PriceLine label="After-hours surcharge" value={`$${p.afterHours.toFixed(2)}`} />}

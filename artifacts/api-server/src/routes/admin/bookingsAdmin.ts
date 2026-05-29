@@ -55,6 +55,7 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     if (driverId !== undefined) updates.driverId = driverId;
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (vehicleType !== undefined) updates.vehicleType = vehicleType;
+    if (adminPrice !== undefined && !isNaN(Number(adminPrice))) updates.totalAmount = Number(adminPrice);
 
     const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
     res.json(updated);

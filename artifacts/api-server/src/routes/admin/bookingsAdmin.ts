@@ -63,15 +63,19 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     const statusChanged = status !== undefined && status !== current.status;
 
     const patchEmailTasks: Promise<unknown>[] = [];
+    let assignedDriver: { name: string; phone?: string | null } | null = null;
     if (driverChanged) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, Number(driverId)));
-      if (driver?.email) { patchEmailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
+      if (driver) {
+        assignedDriver = { name: driver.name, phone: driver.phone };
+        if (driver.email) { patchEmailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
+      }
     }
     if (statusChanged) {
       patchEmailTasks.push(
         status === "completed"
           ? sendPostTripSummary(updated).catch(() => {})
-          : sendStatusUpdate(updated, status).catch(() => {}),
+          : sendStatusUpdate(updated, status, assignedDriver ?? undefined).catch(() => {}),
       );
     }
     await Promise.allSettled(patchEmailTasks);

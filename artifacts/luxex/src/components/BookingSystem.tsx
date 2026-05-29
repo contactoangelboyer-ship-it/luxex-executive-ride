@@ -105,13 +105,13 @@ function calcPrice(state: BookingState, v: VehicleCfg, rawMiles: number, promoDi
   const base = isHourly ? v.hourlyRate * state.hours : v.baseRate;
   const baseLabel = isHourly ? `${state.hours}h × $${v.hourlyRate}/h` : `Base rate`;
   const mileage = isHourly ? 0 : parseFloat((miles * v.perMile).toFixed(2));
-  const airportFee = state.service === "airport" ? v.airportFee : 0;
+  const airportFee = 0; // Airport fee removed
   const hr = state.time ? parseInt(state.time.split(":")[0]) : 12;
   const isAfterHours = hr >= 22 || hr < 6;
   const afterHours = isAfterHours ? parseFloat(((base + mileage) * (v.afterHoursPct / 100)).toFixed(2)) : 0;
   const d = state.date ? new Date(state.date + "T12:00:00") : new Date();
   const dow = d.getDay();
-  const weekend = (dow === 0 || dow === 6) ? parseFloat(((base + mileage) * (v.weekendPct / 100)).toFixed(2)) : 0;
+  const weekend = 0; // Weekend fee removed
   const zoneSurcharge = !isHourly && (zoneSurchargePct > 0 || zoneFlatFee > 0)
     ? parseFloat(((base + mileage) * (zoneSurchargePct / 100) + zoneFlatFee).toFixed(2)) : 0;
   const meetGreet = state.meetAndGreet ? 25 : 0;

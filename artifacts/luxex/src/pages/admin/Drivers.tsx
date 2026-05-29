@@ -223,7 +223,7 @@ import { useEffect, useRef, useState } from "react";
             body: photoFile,
           });
           if (!putRes.ok) throw new Error("Failed to upload image");
-          finalUrl = `/api/storage/public-objects/${objectPath.replace(/^\//, "")}`;
+          finalUrl = `/api/storage${objectPath}`;
         }
 
         if (!finalUrl) { setPhotoError("Please upload a photo or enter a URL."); return; }

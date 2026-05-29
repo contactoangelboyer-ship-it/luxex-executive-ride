@@ -300,6 +300,13 @@ const STATUS_EMAIL_MAP: Record<string, { title: string; passengerMsg: string; ad
     alertClass: "alert-success",
     subjectVerb: "Confirmed",
   },
+  assigned: {
+    title: "A driver has been assigned to your trip.",
+    passengerMsg: "Great news — a chauffeur has been assigned to your reservation. They will contact you before the trip.",
+    adminMsg: "A driver has been assigned to this booking.",
+    alertClass: "alert-driver",
+    subjectVerb: "Driver Assigned",
+  },
   en_route: {
     title: "Your driver is on the way.",
     passengerMsg: "Your chauffeur is heading to your pickup location. Please be ready at the pickup address.",

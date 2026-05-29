@@ -1,6 +1,9 @@
 import { Resend } from "resend";
 import { logger } from "./logger";
 
+if (!process.env.RESEND_API_KEY) {
+  console.error("[mailer] CRITICAL: RESEND_API_KEY is not set — ALL emails will be silently skipped. Set this environment variable to enable email delivery.");
+}
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";

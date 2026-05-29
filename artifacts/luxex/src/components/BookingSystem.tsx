@@ -344,6 +344,13 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
       const res = await fetch(`/api/promotions/validate?code=${encodeURIComponent(code.trim())}`);
       if (res.ok) {
         const promo = await res.json();
+        // Enforce minimum amount requirement
+        if (promo.minAmount && promo.minAmount > 0 && price && price.subtotal < promo.minAmount) {
+          setPromoDiscountPct(0);
+          setPromoFixedDiscount(0);
+          toast({ title: `Minimum booking of $${promo.minAmount.toFixed(2)} required for this promo`, variant: "destructive" });
+          return;
+        }
         if (promo.type === "percent") {
           setPromoDiscountPct(promo.value ?? 0);
           setPromoFixedDiscount(0);

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, pricingConfig, adminDrivers, vehicles, zones, promotions } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { sendCustomerConfirmation, sendAdminNotification, sendStatusUpdate, sendAdminStatusUpdate, sendPostTripSummary } from "../lib/mailer";
 import { logger } from "../lib/logger";
 
@@ -52,7 +52,7 @@ router.get("/promotions/validate", async (req, res) => {
     if (!promo || !promo.active) { res.status(404).json({ error: "Invalid promo code" }); return; }
     if (promo.expiresAt && promo.expiresAt < now) { res.status(400).json({ error: "Promo code expired" }); return; }
     if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) { res.status(400).json({ error: "Promo code exhausted" }); return; }
-    res.json({ valid: true, type: promo.type, value: promo.value, description: promo.description });
+    res.json({ valid: true, type: promo.type, value: promo.value, description: promo.description, minAmount: promo.minAmount ?? 0 });
   } catch (err) {
     logger.error({ err }, "Failed to validate promo");
     res.status(500).json({ error: "Failed to validate promo" });
@@ -295,6 +295,14 @@ router.post("/bookings", async (req, res) => {
     }).returning();
 
     res.status(201).json({ booking, confirmationCode });
+
+    // Increment promo usage count if a promo code was applied
+    if (promoCode) {
+      db.update(promotions)
+        .set({ usedCount: sql`${promotions.usedCount} + 1` })
+        .where(eq(promotions.code, String(promoCode).toUpperCase().trim()))
+        .catch((err) => logger.error({ err }, "[promo] Failed to increment usedCount"));
+    }
 
     sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed"));
     sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed"));

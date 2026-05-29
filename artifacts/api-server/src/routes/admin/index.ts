@@ -186,13 +186,19 @@ router.patch("/bookings/:id", async (req, res) => {
     if (status !== undefined) updates.status = status;
     const [updated] = await db.update(bookings).set(updates as any).where(eq(bookings.id, id)).returning();
     const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
-    const statusChanged = status !== undefined && status !== current.status;
+    // Use effective status: auto-set to "assigned" when driverId is assigned without an explicit status
+    const effectiveStatus = (updates as any).status as string | undefined;
+    const statusChanged = effectiveStatus !== undefined && effectiveStatus !== current.status;
     const emailTasks: Promise<unknown>[] = [];
+    let assignedDriver: { name: string; phone?: string | null } | null = null;
     if (driverChanged) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, Number(driverId)));
-      if (driver?.email) { emailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
+      if (driver) {
+        assignedDriver = { name: driver.name, phone: driver.phone };
+        if (driver.email) { emailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
+      }
     }
-    if (statusChanged) { emailTasks.push(sendStatusUpdate(updated, status).catch(() => {})); }
+    if (statusChanged) { emailTasks.push(sendStatusUpdate(updated, effectiveStatus!, assignedDriver ?? undefined).catch(() => {})); }
     await Promise.allSettled(emailTasks);
     res.json(updated);
   } catch (err: any) {

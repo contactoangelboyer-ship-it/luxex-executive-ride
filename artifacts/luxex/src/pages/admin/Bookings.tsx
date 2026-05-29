@@ -170,21 +170,11 @@ export default function Bookings() {
       const actualMiles = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
       mileage = parseFloat((p.perMile * actualMiles).toFixed(2));
     }
-    if (service === "airport") {
-      surcharges = p.airportFee;
-    }
     // After-hours surcharge (22:00–05:59)
     if (!isHourly && form.time) {
       const hr = parseInt(form.time.split(":")[0]);
       if (hr >= 22 || hr < 6) {
         surcharges = parseFloat((surcharges + (base + mileage) * ((p.afterHoursPct ?? 25) / 100)).toFixed(2));
-      }
-    }
-    // Weekend surcharge
-    if (!isHourly && form.date) {
-      const dow = new Date(form.date + "T12:00:00").getDay();
-      if (dow === 0 || dow === 6) {
-        surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
       }
     }
     // Estimated tolls based on actual or minimum miles
@@ -347,21 +337,11 @@ export default function Bookings() {
             const actualMiles = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
             mileage = parseFloat((p.perMile * actualMiles).toFixed(2));
           }
-          if (next.service === "airport") {
-            surcharges = p.airportFee;
-          }
           // After-hours surcharge (22:00–05:59)
           if (!isHourly && next.time) {
             const hr = parseInt(next.time.split(":")[0]);
             if (hr >= 22 || hr < 6) {
               surcharges = parseFloat((surcharges + (base + mileage) * ((p.afterHoursPct ?? 25) / 100)).toFixed(2));
-            }
-          }
-          // Weekend surcharge
-          if (!isHourly && next.date) {
-            const dow = new Date(next.date + "T12:00:00").getDay();
-            if (dow === 0 || dow === 6) {
-              surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
             }
           }
           // Estimated tolls based on actual or minimum miles
@@ -700,7 +680,7 @@ export default function Bookings() {
                         if (!p) return null;
                         return createForm.service === "hourly"
                           ? `Hourly rate: $${p.hourlyRate}/hr · Price updates automatically with hours`
-                          : `Base: $${p.baseRate} · Min. mileage: ${p.minMiles} mi × $${p.perMile}/mi${createForm.service === "airport" ? ` · Airport fee: $${p.airportFee}` : ""}`;
+                          : `Base: $${p.baseRate} · Min. mileage: ${p.minMiles} mi × $${p.perMile}/mi`;
                       })()}
                     </div>
                   )}

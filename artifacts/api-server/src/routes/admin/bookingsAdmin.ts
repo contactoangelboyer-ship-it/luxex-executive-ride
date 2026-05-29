@@ -45,7 +45,7 @@ router.get("/bookings/:id", requireAdmin, async (req, res) => {
 router.patch("/bookings/:id", requireAdmin, async (req, res) => {
   try {
     const bookingId = Number(req.params.id);
-    const { status, driverId, adminNotes, vehicleType } = req.body;
+    const { status, driverId, adminNotes, vehicleType, totalAmount: adminPrice } = req.body;
 
     const [current] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     if (!current) { res.status(404).json({ error: "Not found" }); return; }

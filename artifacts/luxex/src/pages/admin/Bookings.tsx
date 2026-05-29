@@ -166,7 +166,8 @@ export default function Bookings() {
       mileage = 0;
     } else {
       base = p.baseRate;
-      mileage = parseFloat((p.perMile * p.minMiles).toFixed(2));
+      const actualMiles = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
+      mileage = parseFloat((p.perMile * actualMiles).toFixed(2));
     }
     if (service === "airport") {
       surcharges = p.airportFee;
@@ -185,8 +186,9 @@ export default function Bookings() {
         surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
       }
     }
-    // Estimated tolls based on minimum trip miles
-    const tolls = !isHourly ? (p.minMiles > 40 ? 32 : p.minMiles > 15 ? 20 : 12) : 0;
+    // Estimated tolls based on actual or minimum miles
+    const milesForTolls = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
+    const tolls = !isHourly ? (milesForTolls > 40 ? 32 : milesForTolls > 15 ? 20 : 12) : 0;
     setCreateForm(prev => ({
       ...prev,
       baseAmount: String(base),
@@ -195,7 +197,7 @@ export default function Bookings() {
       tollsAmount: String(tolls),
       totalAmount: "",
     }));
-  }, [pricing]);
+  }, [pricing, routeInfo]);
 
   useEffect(() => { load(); }, [statusFilter]);
 
@@ -337,7 +339,8 @@ export default function Bookings() {
             mileage = 0;
           } else {
             base = p.baseRate;
-            mileage = parseFloat((p.perMile * p.minMiles).toFixed(2));
+            const actualMiles = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
+            mileage = parseFloat((p.perMile * actualMiles).toFixed(2));
           }
           if (next.service === "airport") {
             surcharges = p.airportFee;
@@ -356,8 +359,9 @@ export default function Bookings() {
               surcharges = parseFloat((surcharges + (base + mileage) * ((p.weekendPct ?? 15) / 100)).toFixed(2));
             }
           }
-          // Estimated tolls based on minimum trip miles
-          const tolls = !isHourly ? (p.minMiles > 40 ? 32 : p.minMiles > 15 ? 20 : 12) : 0;
+          // Estimated tolls based on actual or minimum miles
+          const milesForTolls = routeInfo ? Math.max(routeInfo.distanceMiles, p.minMiles) : p.minMiles;
+          const tolls = !isHourly ? (milesForTolls > 40 ? 32 : milesForTolls > 15 ? 20 : 12) : 0;
           return { ...next, baseAmount: String(base), mileageAmount: String(mileage), surchargesAmount: String(surcharges), tollsAmount: String(tolls), totalAmount: "" };
         }
       }

@@ -131,6 +131,7 @@ export default function Bookings() {
   const [saveError, setSaveError] = useState("");
   const [driverAssign, setDriverAssign] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState("");
+    const [adminPrice, setAdminPrice] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
 
   // New booking modal state
@@ -248,6 +249,7 @@ export default function Bookings() {
     setSelected(b);
     setDriverAssign(b.driverId != null ? String(b.driverId) : "");
     setAdminNotes(b.adminNotes ?? "");
+      setAdminPrice(b.totalAmount != null ? String(b.totalAmount.toFixed(2)) : "");
     setSelectedStatus(b.status);
     setSaveError("");
     setResendMsg(null);
@@ -315,6 +317,9 @@ export default function Bookings() {
         driverId: driverAssign !== "" ? Number(driverAssign) : null,
         adminNotes,
       };
+      if (adminPrice !== "" && !isNaN(Number(adminPrice)) && Number(adminPrice) > 0) {
+        payload.totalAmount = Number(adminPrice);
+      }
       const updated = await adminApi.bookings.update(selected.id, payload);
       setBookings(prev => prev.map(b => b.id === selected.id ? updated : b));
       setSelected(updated);
@@ -893,6 +898,18 @@ export default function Bookings() {
                     {drivers.length === 0 && (
                       <p className="text-[10px] text-white/30 mt-1">No drivers registered yet. Add drivers first.</p>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-2">Override Price (USD)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+                      <input type="number" step="0.01" min="0" value={adminPrice}
+                        onChange={e => setAdminPrice(e.target.value)}
+                        className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 pl-7 pr-3 py-2.5 outline-none transition-colors"
+                        placeholder={selected?.totalAmount?.toFixed(2) ?? "0.00"} />
+                    </div>
+                    <p className="text-[10px] text-white/20 mt-1">Leave blank to keep original price. Current: {selected?.totalAmount?.toFixed(2) ?? "0.00"{"}"}</p>
                   </div>
 
                   <div>

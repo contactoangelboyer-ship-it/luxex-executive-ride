@@ -58,25 +58,25 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     if (adminPrice !== undefined && !isNaN(Number(adminPrice))) updates.totalAmount = Number(adminPrice);
 
     const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
-    res.json(updated);
 
     const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
     const statusChanged = status !== undefined && status !== current.status;
 
+    const patchEmailTasks: Promise<unknown>[] = [];
     if (driverChanged) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, Number(driverId)));
-      if (driver?.email) {
-        sendDriverAssignment(updated, driver).catch(() => {});
-      }
+      if (driver?.email) { patchEmailTasks.push(sendDriverAssignment(updated, driver).catch(() => {})); }
     }
-
     if (statusChanged) {
-      if (status === "completed") {
-        sendPostTripSummary(updated).catch(() => {});
-      } else {
-        sendStatusUpdate(updated, status).catch(() => {});
-      }
+      patchEmailTasks.push(
+        status === "completed"
+          ? sendPostTripSummary(updated).catch(() => {})
+          : sendStatusUpdate(updated, status).catch(() => {}),
+      );
     }
+    await Promise.allSettled(patchEmailTasks);
+
+    res.json(updated);
   } catch (err) {
     logger.error({ err }, "Failed to update booking");
     res.status(500).json({ error: "Failed to update booking" });
@@ -105,17 +105,19 @@ router.post("/bookings", requireAdmin, async (req, res) => {
       confirmationCode,
       status: body.status ?? "pending",
     }).returning();
-    res.status(201).json(booking);
-
-    sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (admin create)"));
-    sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (admin create)"));
-
+    const adminCreateTasks: Promise<unknown>[] = [
+      sendCustomerConfirmation(booking).catch((err) => logger.error({ err }, "[mailer] customer confirmation failed (admin create)")),
+      sendAdminNotification(booking).catch((err) => logger.error({ err }, "[mailer] admin notification failed (admin create)")),
+    ];
     if (booking.driverId) {
       const [driver] = await db.select().from(adminDrivers).where(eq(adminDrivers.id, booking.driverId));
       if (driver?.email) {
-        sendDriverAssignment(booking, driver).catch((err) => logger.error({ err }, "[mailer] driver assignment failed (admin create)"));
+        adminCreateTasks.push(sendDriverAssignment(booking, driver).catch((err) => logger.error({ err }, "[mailer] driver assignment failed (admin create)")));
       }
     }
+    await Promise.allSettled(adminCreateTasks);
+
+    res.status(201).json(booking);
   } catch (err) {
     logger.error({ err }, "Failed to create booking (admin)");
     res.status(500).json({ error: "Failed to create booking" });

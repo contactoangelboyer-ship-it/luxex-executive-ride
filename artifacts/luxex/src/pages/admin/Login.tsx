@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 export default function AdminLogin() {
   const [, navigate] = useLocation();
@@ -66,7 +66,7 @@ export default function AdminLogin() {
                   required
                   autoFocus
                   autoComplete="username"
-                  className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-colors"
+                  className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-colors"
                 />
               </div>
 
@@ -80,7 +80,7 @@ export default function AdminLogin() {
                     placeholder="••••••••••"
                     required
                     autoComplete="current-password"
-                    className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] px-4 py-3 pr-12 text-sm text-white placeholder-white/20 outline-none transition-colors"
+                    className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] px-4 py-3 pr-12 text-sm text-white placeholder-white/20 outline-none transition-colors"
                   />
                   <button
                     type="button"

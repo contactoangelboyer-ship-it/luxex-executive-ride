@@ -1,4 +1,7 @@
 import { Resend } from "resend";
+import { PDFDocument, rgb, StandardFonts, PageSizes } from "pdf-lib";
+  import QRCode from "qrcode";
+  
 import { logger } from "./logger";
 
 if (!process.env.RESEND_API_KEY) {
@@ -141,7 +144,133 @@ function bookingTableDriver(b: any): string {
   </table>`;
 }
 
-// ── Customer Confirmation ────────────────────────────────────────────────────
+
+  // ── PDF Confirmation Generation ──────────────────────────────────────────────
+
+  async function generateBookingPDF(booking: any): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.create();
+    const page   = pdfDoc.addPage(PageSizes.A4);
+    const { width, height } = page.getSize();
+
+    const fontReg  = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const GOLD  = rgb(0.788, 0.659, 0.298); // #C9A84C
+    const DARK  = rgb(0.039, 0.039, 0.039); // #0a0a0a
+    const WHITE = rgb(1, 1, 1);
+    const GRAY  = rgb(0.6, 0.6, 0.6);
+    const LGRAY = rgb(0.97, 0.97, 0.97);
+
+    // ── Header (dark bg + logo) ─────────────────────────────────────────────────
+    page.drawRectangle({ x: 0, y: height - 90, width, height: 90, color: DARK });
+    page.drawRectangle({ x: 0, y: height - 94, width, height: 4,  color: GOLD });
+
+    let logoEmbedded = false;
+    try {
+      const logoRes = await fetch("https://www.luxexride.com/logo.png");
+      if (logoRes.ok) {
+        const logoBytes = await logoRes.arrayBuffer();
+        const logoImg   = await pdfDoc.embedPng(logoBytes);
+        const dims      = logoImg.scaleToFit(140, 60);
+        page.drawImage(logoImg, {
+          x: 40, y: height - 90 + (90 - dims.height) / 2,
+          width: dims.width, height: dims.height,
+        });
+        logoEmbedded = true;
+      }
+    } catch { /* no-op — fall back to text */ }
+
+    if (!logoEmbedded) {
+      page.drawText("LUXEX",          { x: 40, y: height - 50, size: 28, font: fontBold, color: GOLD  });
+      page.drawText("EXECUTIVE RIDE", { x: 40, y: height - 70, size: 10, font: fontReg,  color: WHITE });
+    }
+
+    const confLabel  = "BOOKING CONFIRMATION";
+    const confLabelW = fontBold.widthOfTextAtSize(confLabel, 11);
+    page.drawText(confLabel, { x: width - 40 - confLabelW, y: height - 48, size: 11, font: fontBold, color: GOLD });
+
+    const dateStr  = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const dateStrW = fontReg.widthOfTextAtSize(dateStr, 9);
+    page.drawText(dateStr, { x: width - 40 - dateStrW, y: height - 66, size: 9, font: fontReg, color: GRAY });
+
+    // ── QR Code ─────────────────────────────────────────────────────────────────
+    const qrPng = await QRCode.toBuffer(booking.confirmationCode, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 200,
+      color: { dark: "#0a0a0a", light: "#ffffff" },
+    }) as unknown as Buffer;
+    const qrImage = await pdfDoc.embedPng(qrPng);
+    const qrSize  = 110;
+    const qrX     = width - 36 - qrSize;
+    const boxTop  = height - 94 - 20;
+    const qrY     = boxTop - qrSize - 6;
+    page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+    const scanTxt = "Scan to verify";
+    page.drawText(scanTxt, {
+      x: qrX + (qrSize - fontReg.widthOfTextAtSize(scanTxt, 8)) / 2,
+      y: qrY - 14, size: 8, font: fontReg, color: GRAY,
+    });
+
+    // ── Confirmation Code Box ───────────────────────────────────────────────────
+    const boxH = 80;
+    const boxW = width - 72 - qrSize - 16;
+    page.drawRectangle({ x: 36, y: boxTop - boxH, width: boxW, height: boxH, color: LGRAY, borderColor: GOLD, borderWidth: 1 });
+    page.drawRectangle({ x: 36, y: boxTop - 3,   width: 44,   height: 3,   color: GOLD });
+    page.drawText("CONFIRMATION CODE", { x: 52, y: boxTop - 20, size: 8, font: fontReg, color: GRAY });
+    page.drawText(booking.confirmationCode ?? "—", { x: 52, y: boxTop - 56, size: 26, font: fontBold, color: DARK });
+
+    // ── Trip Details ─────────────────────────────────────────────────────────────
+    let curY = boxTop - boxH - 40;
+    page.drawText("TRIP DETAILS", { x: 40, y: curY, size: 10, font: fontBold, color: DARK });
+    page.drawRectangle({ x: 40, y: curY - 6, width: 38, height: 2, color: GOLD });
+    curY -= 24;
+
+    const rows: [string, string][] = [
+      ["Passenger",         booking.passengerName    ?? "—"],
+      ["Date",              booking.date             ?? "—"],
+      ["Pickup Time",       fmtTime(booking.time)],
+      ["Pickup Location",   booking.pickupLocation   ?? "—"],
+      ["Dropoff Location",  booking.dropoffLocation  ?? "—"],
+      ["Passengers",        String(booking.passengers ?? 1)],
+      ["Vehicle Type",      titleCase(booking.vehicleType ?? "sedan")],
+    ];
+    if (booking.flightNumber)    rows.push(["Flight #",         booking.flightNumber]);
+    if (booking.specialRequests) rows.push(["Special Requests", booking.specialRequests]);
+
+    const rowH  = 26;
+    const maxVW = width - 220 - 52;
+    rows.forEach(([label, rawVal], i) => {
+      const rowY = curY - i * rowH;
+      if (i % 2 === 0) page.drawRectangle({ x: 36, y: rowY - rowH + 8, width: width - 72, height: rowH, color: LGRAY });
+      page.drawText(label, { x: 44, y: rowY, size: 10, font: fontReg, color: GRAY });
+      let val = String(rawVal);
+      while (val.length > 4 && fontBold.widthOfTextAtSize(val, 10) > maxVW) val = val.slice(0, -1);
+      if (val !== String(rawVal)) val += "…";
+      page.drawText(val, { x: 220, y: rowY, size: 10, font: fontBold, color: DARK });
+    });
+
+    curY -= rows.length * rowH + 28;
+
+    // ── Price Box ────────────────────────────────────────────────────────────────
+    page.drawRectangle({ x: 36, y: curY - 54, width: width - 72, height: 64, color: DARK });
+    page.drawText("TOTAL AMOUNT", { x: 52, y: curY - 22, size: 9, font: fontReg, color: GRAY });
+    const totalStr = `${Number(booking.totalAmount ?? 0).toFixed(2)}`;
+    const totalW   = fontBold.widthOfTextAtSize(totalStr, 28);
+    page.drawText(totalStr, { x: width - 52 - totalW, y: curY - 48, size: 28, font: fontBold, color: GOLD });
+
+    // ── Footer ───────────────────────────────────────────────────────────────────
+    page.drawRectangle({ x: 0, y: 0, width, height: 56, color: DARK });
+    page.drawRectangle({ x: 0, y: 56, width, height: 2, color: GOLD });
+    const f1 = "LuxEx Executive Ride  ·  contact@luxexride.com  ·  www.luxexride.com";
+    const f2 = "This document serves as your official booking confirmation. Thank you for choosing LuxEx.";
+    page.drawText(f1, { x: (width - fontReg.widthOfTextAtSize(f1, 8.5)) / 2, y: 36, size: 8.5, font: fontReg, color: GRAY });
+    page.drawText(f2, { x: (width - fontReg.widthOfTextAtSize(f2, 8))   / 2, y: 18, size: 8,   font: fontReg, color: rgb(0.45, 0.45, 0.45) });
+
+    return pdfDoc.save();
+  }
+
+  // ── Customer Confirmation ────────────────────────────────────────────────────
 
 export async function sendCustomerConfirmation(booking: any): Promise<void> {
   if (!resend) {
@@ -178,6 +307,15 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
     </div>
   `);
 
+  // Generate PDF booking confirmation
+  let pdfAttachments: { filename: string; content: Buffer }[] = [];
+  try {
+    const pdfBytes = await generateBookingPDF(booking);
+    pdfAttachments = [{ filename: `LuxEx-Confirmation-${booking.confirmationCode}.pdf`, content: Buffer.from(pdfBytes) }];
+  } catch (pdfErr) {
+    logger.warn({ err: pdfErr }, "[mailer] PDF generation failed — sending confirmation without attachment");
+  }
+
   try {
     const result = await resend.emails.send({
       from: FROM_BOOKINGS,
@@ -185,6 +323,7 @@ export async function sendCustomerConfirmation(booking: any): Promise<void> {
       to: [booking.passengerEmail],
       subject: `Booking Confirmed — ${booking.confirmationCode} · LuxEx Executive Ride`,
       html,
+      attachments: pdfAttachments,
     });
     logger.info({ id: result.data?.id, to: booking.passengerEmail }, "[mailer] customer confirmation sent");
   } catch (err) {

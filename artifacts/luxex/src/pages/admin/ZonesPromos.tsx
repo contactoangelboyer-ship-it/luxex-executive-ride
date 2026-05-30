@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, X, Loader2, MapPin, Tag } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 export default function ZonesPromos() {
   const [tab, setTab] = useState<"zones" | "promos">("zones");
@@ -99,7 +99,7 @@ export default function ZonesPromos() {
                     <td className="px-4 py-3 text-sm font-bold text-white">{z.name}</td>
                     <td className="px-4 py-3 text-xs text-white/50">{z.city ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-white/50">{z.state ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-[#F2E147]">{z.surchargePct}%</td>
+                    <td className="px-4 py-3 text-xs font-bold text-[#C9A84C]">{z.surchargePct}%</td>
                     <td className="px-4 py-3 text-xs text-white/50">{z.flatFee > 0 ? `$${z.flatFee}` : "—"}</td>
                     <td className="px-4 py-3"><span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 border ${z.active ? "text-green-400 bg-green-400/10 border-green-400/20" : "text-white/30 bg-white/5 border-white/10"}`}>{z.active ? "Active" : "Inactive"}</span></td>
                     <td className="px-4 py-3"><div className="flex gap-1.5">
@@ -126,7 +126,7 @@ export default function ZonesPromos() {
                 : promos.length === 0 ? <tr><td colSpan={8} className="text-center py-10 text-white/20 text-xs">No promotions configured</td></tr>
                 : promos.map(p => (
                   <tr key={p.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="px-4 py-3 font-mono text-sm font-bold text-[#F2E147]">{p.code}</td>
+                    <td className="px-4 py-3 font-mono text-sm font-bold text-[#C9A84C]">{p.code}</td>
                     <td className="px-4 py-3 text-xs text-white/50 capitalize">{p.type}</td>
                     <td className="px-4 py-3 text-xs font-bold text-white">{p.type === "percent" ? `${p.value}%` : `$${p.value}`}</td>
                     <td className="px-4 py-3 text-xs text-white/50">{p.minAmount > 0 ? `$${p.minAmount}` : "—"}</td>
@@ -165,7 +165,7 @@ export default function ZonesPromos() {
                       <div key={String(k)}>
                         <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">{String(l)}</label>
                         <input type="text" placeholder={String(ph)} required={!!req}
-                          className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
+                          className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
                           value={(zoneForm as any)[k as string]} onChange={e => setZoneForm(p => ({ ...p, [k as string]: e.target.value }))} />
                       </div>
                     ))}
@@ -174,7 +174,7 @@ export default function ZonesPromos() {
                         <div key={String(k)}>
                           <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">{String(l)}</label>
                           <input type="number" step="1" min="0"
-                            className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none"
+                            className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none"
                             value={(zoneForm as any)[k as string]} onChange={e => setZoneForm(p => ({ ...p, [k as string]: Number(e.target.value) }))} />
                         </div>
                       ))}
@@ -186,7 +186,7 @@ export default function ZonesPromos() {
                       <div key={String(k)}>
                         <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">{String(l)}</label>
                         <input type="text" placeholder={String(ph)} required={!!req}
-                          className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
+                          className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
                           value={(promoForm as any)[k as string]} onChange={e => setPromoForm(p => ({ ...p, [k as string]: e.target.value }))} />
                       </div>
                     ))}
@@ -202,7 +202,7 @@ export default function ZonesPromos() {
                       <div>
                         <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">Value</label>
                         <input type="number" step="1" min="0"
-                          className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none"
+                          className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none"
                           value={promoForm.value} onChange={e => setPromoForm(p => ({ ...p, value: Number(e.target.value) }))} />
                       </div>
                     </div>

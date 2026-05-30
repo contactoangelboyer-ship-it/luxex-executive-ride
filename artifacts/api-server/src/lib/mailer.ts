@@ -41,10 +41,7 @@ function baseTemplate(body: string): string {
   body { margin:0; padding:0; background:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; -webkit-font-smoothing:antialiased; }
   .wrap { max-width:600px; margin:0 auto; background:#ffffff; }
   .header { background:#0a0a0a; padding:36px 40px; text-align:center; }
-  .logo-word { font-size:24px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; }
-  .logo-lux { color:#C9A84C; }
-  .logo-ex { color:#ffffff; }
-  .logo-sub { color:#888; font-size:11px; letter-spacing:0.25em; text-transform:uppercase; margin-top:6px; }
+  .header img { display:block; margin:0 auto; max-width:150px; height:auto; }
   .divider { height:4px; background:linear-gradient(90deg,#C9A84C 0%,#A8892E 100%); }
   .body { padding:40px; }
   h1 { margin:0 0 8px; font-size:26px; font-weight:800; color:#0a0a0a; line-height:1.2; }
@@ -75,8 +72,7 @@ function baseTemplate(body: string): string {
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="logo-word"><span class="logo-lux">Lux</span><span class="logo-ex">Ex</span></div>
-    <div class="logo-sub">Executive Ride</div>
+    <img src="https://www.luxexride.com/logo.png" alt="LuxEx Executive Ride" width="150" style="max-width:150px;height:auto;display:block;margin:0 auto;" />
   </div>
   <div class="divider"></div>
   ${body}

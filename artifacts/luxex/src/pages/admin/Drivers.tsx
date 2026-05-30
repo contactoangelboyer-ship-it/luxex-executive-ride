@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
   import { AdminLayout } from "@/components/AdminLayout";
   import { adminApi } from "@/lib/adminApi";
 
-  const YELLOW = "#F2E147";
+  const YELLOW = "#C9A84C";
 
   const STATUS_COLORS: Record<string, string> = {
-    available: "text-[#F2E147] bg-[#F2E147]/10 border-[#F2E147]/20",
+    available: "text-[#C9A84C] bg-[#C9A84C]/10 border-[#C9A84C]/20",
     on_trip:   "text-white/80 bg-white/10 border-white/20",
     off_duty:  "text-white/25 bg-white/[0.03] border-white/[0.06]",
   };
@@ -289,7 +289,7 @@ import { useEffect, useRef, useState } from "react";
                       <tr key={d.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                         <td className="px-4 py-3">
                           <button type="button" onClick={() => openPhoto(d)} title="Manage photo"
-                            className="relative w-9 h-9 border border-white/10 hover:border-[#F2E147]/40 transition-colors overflow-hidden group">
+                            className="relative w-9 h-9 border border-white/10 hover:border-[#C9A84C]/40 transition-colors overflow-hidden group">
                             {d.photoUrl ? (
                               <img src={d.photoUrl} alt={d.name} className="w-full h-full object-cover" />
                             ) : (
@@ -338,14 +338,14 @@ import { useEffect, useRef, useState } from "react";
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="flex items-center gap-1 text-xs text-[#F2E147]">
+                          <span className="flex items-center gap-1 text-xs text-[#C9A84C]">
                             <Star className="w-3 h-3 fill-current" />{(d.rating ?? 5.0).toFixed(1)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs text-white/40">{d.totalTrips ?? 0}</td>
                         <td className="px-4 py-3">
                           {d.accessPin ? (
-                            <span className="text-[10px] font-mono font-bold text-[#F2E147]/70 bg-[#F2E147]/5 border border-[#F2E147]/10 px-2 py-0.5">••••••</span>
+                            <span className="text-[10px] font-mono font-bold text-[#C9A84C]/70 bg-[#C9A84C]/5 border border-[#C9A84C]/10 px-2 py-0.5">••••••</span>
                           ) : (
                             <span className="text-[10px] text-white/20">No PIN</span>
                           )}
@@ -353,7 +353,7 @@ import { useEffect, useRef, useState } from "react";
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5">
                             <button type="button" onClick={() => openPin(d)} title="Manage PIN"
-                              className="p-1.5 border border-[#F2E147]/20 text-[#F2E147]/40 hover:text-[#F2E147] hover:border-[#F2E147]/40 transition-colors">
+                              className="p-1.5 border border-[#C9A84C]/20 text-[#C9A84C]/40 hover:text-[#C9A84C] hover:border-[#C9A84C]/40 transition-colors">
                               <Key className="w-3.5 h-3.5" />
                             </button>
                             <button type="button" onClick={() => openEdit(d)} title="Edit driver"
@@ -399,13 +399,13 @@ import { useEffect, useRef, useState } from "react";
                       <label className="block text-[10px] font-bold tracking-widest uppercase text-white/25 mb-1.5">{label}</label>
                       <input type={type} placeholder={placeholder} value={form[key] as string}
                         onChange={e => inp(key, e.target.value)}
-                        className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none" />
+                        className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none" />
                     </div>
                   ))}
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/25 mb-1.5">Vehicle</label>
                     <select value={form.vehicleId ?? ""} onChange={e => inp("vehicleId", e.target.value ? Number(e.target.value) : null)}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none">
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none">
                       <option value="">No vehicle assigned</option>
                       {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
@@ -413,7 +413,7 @@ import { useEffect, useRef, useState } from "react";
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/25 mb-1.5">Status</label>
                     <select value={form.status} onChange={e => inp("status", e.target.value)}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none">
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none">
                       <option value="available">Available</option>
                       <option value="on_trip">On Trip</option>
                       <option value="off_duty">Off Duty</option>
@@ -422,7 +422,7 @@ import { useEffect, useRef, useState } from "react";
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/25 mb-1.5">Notes</label>
                     <textarea value={form.notes} onChange={e => inp("notes", e.target.value)} rows={2}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none resize-none" />
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none resize-none" />
                   </div>
                   {saveError && <p className="text-xs text-red-400/80 bg-red-400/5 border border-red-400/10 px-3 py-2">{saveError}</p>}
                 </div>
@@ -478,7 +478,7 @@ import { useEffect, useRef, useState } from "react";
                     <input type="url" placeholder="https://..." value={photoFile ? "" : photoUrl}
                       onChange={e => { setPhotoUrl(e.target.value); setPhotoFile(null); setPhotoPreview(e.target.value || null); }}
                       disabled={!!photoFile}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none disabled:opacity-30" />
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none disabled:opacity-30" />
                   </div>
 
                   {photoError && <p className="text-xs text-red-400/80 bg-red-400/5 border border-red-400/10 px-3 py-2">{photoError}</p>}
@@ -555,7 +555,7 @@ import { useEffect, useRef, useState } from "react";
                       <div className="bg-white/[0.03] border border-white/[0.06] p-3 mb-3">
                         <p className="text-[10px] text-white/30 mb-1">Current PIN</p>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-lg font-black text-[#F2E147] tracking-widest">
+                          <span className="font-mono text-lg font-black text-[#C9A84C] tracking-widest">
                             {pinVisible ? pinDriver.accessPin : "•".repeat(pinDriver.accessPin.length)}
                           </span>
                           {pinDriver.pinGeneratedAt && (
@@ -583,7 +583,7 @@ import { useEffect, useRef, useState } from "react";
                     )}
 
                     <button type="button" onClick={generatePin} disabled={pinSaving}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[11px] font-black tracking-widest uppercase border border-[#F2E147]/20 text-[#F2E147]/70 hover:text-[#F2E147] hover:border-[#F2E147]/40 transition-colors disabled:opacity-40 mb-3">
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[11px] font-black tracking-widest uppercase border border-[#C9A84C]/20 text-[#C9A84C]/70 hover:text-[#C9A84C] hover:border-[#C9A84C]/40 transition-colors disabled:opacity-40 mb-3">
                       {pinSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                       {pinDriver.accessPin ? "Regenerate PIN" : "Generate PIN"}
                     </button>
@@ -591,7 +591,7 @@ import { useEffect, useRef, useState } from "react";
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">Set Custom PIN (4–10 digits)</label>
                     <div className="flex gap-2">
                       <input type="text" inputMode="numeric" maxLength={10} placeholder="e.g. 4729"
-                        className="flex-1 bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white font-mono placeholder-white/20 px-3 py-2.5 outline-none"
+                        className="flex-1 bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white font-mono placeholder-white/20 px-3 py-2.5 outline-none"
                         value={customPin}
                         onChange={e => setCustomPin(e.target.value.replace(/\D/g, ""))} />
                       <button type="button" onClick={setCustomPinHandler} disabled={pinSaving || !customPin}

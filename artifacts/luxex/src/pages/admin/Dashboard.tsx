@@ -13,12 +13,12 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 const Y20 = "rgba(242,225,71,0.2)";
 const Y05 = "rgba(242,225,71,0.05)";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:     "text-[#F2E147] bg-[#F2E147]/10 border-[#F2E147]/20",
+  pending:     "text-[#C9A84C] bg-[#C9A84C]/10 border-[#C9A84C]/20",
   confirmed:   "text-blue-300 bg-blue-400/10 border-blue-400/20",
   assigned:    "text-purple-300 bg-purple-400/10 border-purple-400/20",
   in_progress: "text-white bg-white/10 border-white/30",
@@ -255,12 +255,12 @@ export default function Dashboard() {
         {/* DB Warning */}
         {!loading && !dbConfigured && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-4 p-4 border border-[#F2E147]/20 bg-[#F2E147]/5">
-            <AlertTriangle className="w-5 h-5 text-[#F2E147] shrink-0 mt-0.5" />
+            className="flex items-start gap-4 p-4 border border-[#C9A84C]/20 bg-[#C9A84C]/5">
+            <AlertTriangle className="w-5 h-5 text-[#C9A84C] shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-[#F2E147] mb-1">Database not connected — showing demo data</p>
+              <p className="text-sm font-bold text-[#C9A84C] mb-1">Database not connected — showing demo data</p>
               <p className="text-xs text-white/40 leading-relaxed">
-                Charts and metrics below use sample data for preview. Add a <code className="font-mono bg-[#F2E147]/10 px-1 text-[#F2E147]">DATABASE_URL</code> environment variable to switch to live data.
+                Charts and metrics below use sample data for preview. Add a <code className="font-mono bg-[#C9A84C]/10 px-1 text-[#C9A84C]">DATABASE_URL</code> environment variable to switch to live data.
               </p>
             </div>
           </motion.div>
@@ -292,8 +292,8 @@ export default function Dashboard() {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="bg-[#0f0f0f] border border-white/[0.06] px-4 py-3 flex items-center gap-3">
-            <div className="w-7 h-7 flex items-center justify-center bg-[#F2E147]/10 border border-[#F2E147]/20 shrink-0">
-              <Receipt className="w-3.5 h-3.5 text-[#F2E147]" />
+            <div className="w-7 h-7 flex items-center justify-center bg-[#C9A84C]/10 border border-[#C9A84C]/20 shrink-0">
+              <Receipt className="w-3.5 h-3.5 text-[#C9A84C]" />
             </div>
             <div>
               <p className="font-black text-lg text-white">${avgTicket.toFixed(0)}</p>
@@ -333,7 +333,7 @@ export default function Dashboard() {
             const Icon = a.icon;
             return (
               <Link key={a.href} href={a.href}>
-                <a className={`flex items-center justify-between p-3 border text-xs font-bold tracking-wide hover:bg-white/[0.03] transition-colors ${a.active ? "border-[#F2E147]/30 text-[#F2E147] bg-[#F2E147]/5" : "border-white/[0.07] text-white/40 hover:text-white hover:border-white/20"}`}>
+                <a className={`flex items-center justify-between p-3 border text-xs font-bold tracking-wide hover:bg-white/[0.03] transition-colors ${a.active ? "border-[#C9A84C]/30 text-[#C9A84C] bg-[#C9A84C]/5" : "border-white/[0.07] text-white/40 hover:text-white hover:border-white/20"}`}>
                   <div className="flex items-center gap-2">
                     <Icon className="w-3.5 h-3.5" />
                     {a.label}
@@ -389,7 +389,7 @@ export default function Dashboard() {
               <div className="flex gap-1 ml-auto -mt-4">
                 {(["revenue", "count"] as const).map(k => (
                   <button key={k} onClick={() => setActiveChart(k)}
-                    className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest border transition-colors ${activeChart === k ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/10" : "border-white/10 text-white/30 hover:border-white/20"}`}>
+                    className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest border transition-colors ${activeChart === k ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/10" : "border-white/10 text-white/30 hover:border-white/20"}`}>
                     {k === "revenue" ? "Revenue" : "Trips"}
                   </button>
                 ))}
@@ -503,7 +503,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
             <h3 className="font-bold text-sm uppercase tracking-wider text-white/80">Recent Bookings</h3>
             <Link href="/admin/bookings">
-              <a className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-white/25 hover:text-[#F2E147] transition-colors">
+              <a className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-white/25 hover:text-[#C9A84C] transition-colors">
                 View all <ArrowRight className="w-3 h-3" />
               </a>
             </Link>
@@ -534,12 +534,12 @@ export default function Dashboard() {
                   </tr>
                 ) : recentBookings.map((b: any) => (
                   <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-4 py-3 font-mono text-[11px] text-[#F2E147]">{b.confirmationCode}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]">{b.confirmationCode}</td>
                     <td className="px-4 py-3 text-xs text-white font-medium whitespace-nowrap">{b.passengerName}</td>
                     <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{SERVICE_LABELS[b.service] ?? b.service}</td>
                     <td className="px-4 py-3 text-xs text-white/40 max-w-[160px]">
                       <div className="flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3 text-[#F2E147]/40 shrink-0" />
+                        <MapPin className="w-3 h-3 text-[#C9A84C]/40 shrink-0" />
                         <span className="truncate">{b.pickupAddress?.split(",")[0] ?? "—"}</span>
                       </div>
                     </td>

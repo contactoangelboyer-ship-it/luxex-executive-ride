@@ -4,7 +4,7 @@ import { Edit2, Save, X, Loader2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 const LABELS: Record<string, string> = { sedan: "Executive Sedan", suv: "Luxury SUV", van: "Premium Van" };
 
 export default function Pricing() {
@@ -93,7 +93,7 @@ export default function Pricing() {
                           <div className="flex items-center gap-1">
                             {f.prefix && <span className="text-white/30 text-sm">{f.prefix}</span>}
                             <input type="number" step={f.step}
-                              className="bg-transparent border-b border-[#F2E147]/40 text-[#F2E147] font-bold text-sm outline-none w-full"
+                              className="bg-transparent border-b border-[#C9A84C]/40 text-[#C9A84C] font-bold text-sm outline-none w-full"
                               value={draft[f.key] ?? ""} onChange={e => setDraft((p: any) => ({ ...p, [f.key]: Number(e.target.value) }))} />
                           </div>
                         ) : (
@@ -116,8 +116,8 @@ export default function Pricing() {
 
         {saveError && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2">{saveError}</p>}
 
-        <div className="bg-[#111] border border-[#F2E147]/10 p-4">
-          <p className="text-[10px] uppercase tracking-widest text-[#F2E147]/40 mb-1 font-bold">How the algorithm works</p>
+        <div className="bg-[#111] border border-[#C9A84C]/10 p-4">
+          <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/40 mb-1 font-bold">How the algorithm works</p>
           <p className="text-xs text-white/30 leading-relaxed">
             Price = Base Rate + (Distance × Per Mile) + Airport Fee (if applicable) + After-Hours Surcharge (10pm–6am) + Weekend Surcharge + Estimated Tolls. Minimum charge is "Min. Miles" × per-mile rate.
           </p>

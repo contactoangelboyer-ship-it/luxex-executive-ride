@@ -421,6 +421,7 @@ export async function sendAdminStatusUpdate(
   const statusColors: Record<string, string> = {
     en_route: "#fbbf24", on_site: "#34d399", in_progress: "#34d399",
     completed: "#34d399", cancelled: "#f87171", confirmed: "#60a5fa",
+    assigned: "#818cf8",
   };
   const badgeColor = statusColors[newStatus] ?? "#aaa";
 

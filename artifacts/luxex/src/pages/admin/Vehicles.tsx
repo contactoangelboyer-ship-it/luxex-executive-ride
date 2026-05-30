@@ -4,10 +4,10 @@ import { Plus, Edit2, Trash2, X, Loader2 } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 const STATUS_COLORS: Record<string, string> = {
-  active:      "text-[#F2E147] bg-[#F2E147]/10 border-[#F2E147]/20",
+  active:      "text-[#C9A84C] bg-[#C9A84C]/10 border-[#C9A84C]/20",
   maintenance: "text-white/60 bg-white/10 border-white/20",
   inactive:    "text-white/25 bg-white/[0.03] border-white/[0.06]",
 };
@@ -128,7 +128,7 @@ export default function Vehicles() {
                 <div>
                   <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">Type</label>
                   <select value={form.type} onChange={e => inp("type", e.target.value)}
-                    className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none" style={{ colorScheme: "dark" }}>
+                    className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none" style={{ colorScheme: "dark" }}>
                     <option value="sedan">Executive Sedan</option>
                     <option value="suv">Luxury SUV</option>
                     <option value="van">Premium Van</option>
@@ -143,7 +143,7 @@ export default function Vehicles() {
                   <div key={f.key}>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">{f.label}</label>
                     <input type="text" placeholder={f.placeholder}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none"
                       value={form[f.key]} onChange={e => inp(f.key, e.target.value)} />
                   </div>
                 ))}
@@ -152,7 +152,7 @@ export default function Vehicles() {
                     <div key={k}>
                       <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">{l}</label>
                       <input type="number" min={mn} max={mx}
-                        className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none"
+                        className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none"
                         value={form[k]} onChange={e => inp(k, Number(e.target.value))} />
                     </div>
                   ))}
@@ -160,7 +160,7 @@ export default function Vehicles() {
                 <div>
                   <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-1.5">Status</label>
                   <select value={form.status} onChange={e => inp("status", e.target.value)}
-                    className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none" style={{ colorScheme: "dark" }}>
+                    className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none" style={{ colorScheme: "dark" }}>
                     <option value="active">Active</option>
                     <option value="maintenance">Maintenance</option>
                     <option value="inactive">Inactive</option>

@@ -402,35 +402,76 @@ router.delete("/zones/:id", async (req, res) => {
 
 // ── Promotions ────────────────────────────────────────────────────────────────
 
-router.get("/promotions", async (_req, res) => {
-  try {
-    const rows = await db.select().from(promotions).orderBy(desc(promotions.createdAt));
-    res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to load promotions" }); }
-});
+  function parsePromoBody(body: any, partial = false) {
+    const data: Record<string, any> = {};
+    if (!partial || body.code !== undefined) {
+      const code = String(body.code ?? "").trim().toUpperCase();
+      if (!partial && !code) throw Object.assign(new Error("Promo code is required"), { status: 400 });
+      if (code) data.code = code;
+    }
+    if (!partial || body.type !== undefined)
+      data.type = body.type === "flat" ? "flat" : "percent";
+    if (!partial || body.value !== undefined) {
+      const val = Number(body.value);
+      if (!partial && !(val > 0)) throw Object.assign(new Error("value must be a positive number"), { status: 400 });
+      if (val > 0) {
+        if ((data.type ?? "percent") === "percent" && val > 100)
+          throw Object.assign(new Error("Percentage value cannot exceed 100"), { status: 400 });
+        data.value = val;
+      }
+    }
+    if (body.minAmount   !== undefined) data.minAmount   = Math.max(0, Number(body.minAmount ?? 0));
+    if (body.maxUses     !== undefined) data.maxUses     = body.maxUses ? Math.max(1, Number(body.maxUses)) : null;
+    if (body.expiresAt   !== undefined) data.expiresAt   = body.expiresAt ? new Date(body.expiresAt) : null;
+    if (body.active      !== undefined) data.active      = Boolean(body.active);
+    if (body.description !== undefined) data.description = body.description ? String(body.description).slice(0, 300) : null;
+    if (body.usedCount   !== undefined) data.usedCount   = Math.max(0, Number(body.usedCount));
+    return data;
+  }
 
-router.post("/promotions", async (req, res) => {
-  try {
-    const [promo] = await db.insert(promotions).values(req.body).returning();
-    res.status(201).json(promo);
-  } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to create promotion" }); }
-});
+  router.get("/promotions", async (_req, res) => {
+    try {
+      const rows = await db.select().from(promotions).orderBy(desc(promotions.createdAt));
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to load promotions" }); }
+  });
 
-router.patch("/promotions/:id", async (req, res) => {
-  try {
-    const [updated] = await db.update(promotions).set(req.body).where(eq(promotions.id, Number(req.params.id))).returning();
-    if (!updated) { res.status(404).json({ error: "Promotion not found" }); return; }
-    res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to update promotion" }); }
-});
+  router.post("/promotions", async (req, res) => {
+    try {
+      const data = parsePromoBody(req.body, false);
+      const [promo] = await db.insert(promotions).values(data as any).returning();
+      res.status(201).json(promo);
+    } catch (err: any) {
+      const isDupe = err?.message?.includes("unique") || err?.code === "23505";
+      const status = (err as any).status ?? (isDupe ? 409 : 500);
+      const codeStr = String(req.body?.code ?? "").toUpperCase();
+      res.status(status).json({ error: isDupe ? `Code "${codeStr}" already exists` : (err?.message ?? "Failed to create promotion") });
+    }
+  });
 
-router.delete("/promotions/:id", async (req, res) => {
-  try {
-    await db.delete(promotions).where(eq(promotions.id, Number(req.params.id)));
-    res.json({ ok: true });
-  } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to delete promotion" }); }
-});
+  router.patch("/promotions/:id", async (req, res) => {
+    try {
+      const data = parsePromoBody(req.body, true);
+      if (!Object.keys(data).length) { res.status(400).json({ error: "No valid fields to update" }); return; }
+      const [updated] = await db.update(promotions).set(data).where(eq(promotions.id, Number(req.params.id))).returning();
+      if (!updated) { res.status(404).json({ error: "Promotion not found" }); return; }
+      res.json(updated);
+    } catch (err: any) {
+      const isDupe = err?.message?.includes("unique") || err?.code === "23505";
+      const status = (err as any).status ?? (isDupe ? 409 : 500);
+      const codeStr = String(req.body?.code ?? "").toUpperCase();
+      res.status(status).json({ error: isDupe ? `Code "${codeStr}" already exists` : (err?.message ?? "Failed to update promotion") });
+    }
+  });
 
+  router.delete("/promotions/:id", async (req, res) => {
+    try {
+      await db.delete(promotions).where(eq(promotions.id, Number(req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err?.message ?? "Failed to delete promotion" }); }
+  });
+
+  
 // ── Email diagnostic ──────────────────────────────────────────────────────────
 
 router.get("/email-status", async (_req, res) => {

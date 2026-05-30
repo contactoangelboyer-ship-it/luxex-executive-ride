@@ -11,7 +11,7 @@ import {
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 const COLORS = [YELLOW, "#60a5fa", "#a78bfa", "#34d399", "#f87171", "#fb923c"];
 
 type Range = "week" | "month" | "all";
@@ -170,12 +170,12 @@ export default function Reports() {
         {/* DB Warning */}
         {!loading && !dbConfigured && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-4 p-4 border border-[#F2E147]/20 bg-[#F2E147]/5">
-            <AlertTriangle className="w-5 h-5 text-[#F2E147] shrink-0 mt-0.5" />
+            className="flex items-start gap-4 p-4 border border-[#C9A84C]/20 bg-[#C9A84C]/5">
+            <AlertTriangle className="w-5 h-5 text-[#C9A84C] shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-[#F2E147] mb-1">Database not connected</p>
+              <p className="text-sm font-bold text-[#C9A84C] mb-1">Database not connected</p>
               <p className="text-xs text-white/40 leading-relaxed">
-                Add a <code className="font-mono bg-[#F2E147]/10 px-1 text-[#F2E147]">DATABASE_URL</code> environment variable to see live analytics.
+                Add a <code className="font-mono bg-[#C9A84C]/10 px-1 text-[#C9A84C]">DATABASE_URL</code> environment variable to see live analytics.
               </p>
             </div>
           </motion.div>

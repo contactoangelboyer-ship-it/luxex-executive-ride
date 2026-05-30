@@ -5,7 +5,7 @@ import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Za
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
-const YELLOW = "#F2E147";
+const YELLOW = "#C9A84C";
 
 function PlacesInput({ value, onChange, onPlaceSelect, required, placeholder, className }: {
   value: string;
@@ -57,9 +57,9 @@ const STATUS_OPTIONS = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:     "text-[#F2E147] bg-[#F2E147]/10 border-[#F2E147]/20",
+  pending:     "text-[#C9A84C] bg-[#C9A84C]/10 border-[#C9A84C]/20",
   confirmed:   "text-white/80 bg-white/10 border-white/20",
-  assigned:    "text-[#F2E147]/80 bg-[#F2E147]/5 border-[#F2E147]/15",
+  assigned:    "text-[#C9A84C]/80 bg-[#C9A84C]/5 border-[#C9A84C]/15",
   in_progress: "text-white bg-white/10 border-white/30",
   completed:   "text-white/40 bg-white/5 border-white/10",
   cancelled:   "text-white/25 bg-white/[0.03] border-white/[0.06]",
@@ -116,7 +116,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputCls = "w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none transition-colors";
+const inputCls = "w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none transition-colors";
 const selectCls = inputCls + " cursor-pointer";
 
 export default function Bookings() {
@@ -443,7 +443,7 @@ export default function Bookings() {
           <div className="flex gap-1 flex-wrap">
             {STATUS_OPTIONS.map(opt => (
               <button key={opt.value} onClick={() => setStatusFilter(opt.value)}
-                className={`px-3 py-2 text-[10px] font-bold tracking-widest uppercase border transition-colors ${statusFilter === opt.value ? "border-[#F2E147] text-[#F2E147] bg-[#F2E147]/5" : "border-white/[0.07] text-white/30 hover:border-white/20"}`}>
+                className={`px-3 py-2 text-[10px] font-bold tracking-widest uppercase border transition-colors ${statusFilter === opt.value ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/5" : "border-white/[0.07] text-white/30 hover:border-white/20"}`}>
                 {opt.label}
               </button>
             ))}
@@ -469,7 +469,7 @@ export default function Bookings() {
                   const driver = drivers.find(d => d.id === b.driverId);
                   return (
                     <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onClick={() => openDetail(b)}>
-                      <td className="px-4 py-3 font-mono text-[11px] text-[#F2E147] whitespace-nowrap">{b.confirmationCode}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C] whitespace-nowrap">{b.confirmationCode}</td>
                       <td className="px-4 py-3 text-xs text-white font-medium whitespace-nowrap">{b.passengerName}</td>
                       <td className="px-4 py-3 text-xs text-white/40 whitespace-nowrap">{b.passengerPhone}</td>
                       <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.service}</td>
@@ -595,16 +595,16 @@ export default function Bookings() {
                   </div>
                   {/* Route info badge */}
                   {(routeLoading || routeInfo) && createForm.service !== "hourly" && (
-                    <div className="flex items-center gap-4 px-3 py-2 bg-[#F2E147]/5 border border-[#F2E147]/15 mb-3">
+                    <div className="flex items-center gap-4 px-3 py-2 bg-[#C9A84C]/5 border border-[#C9A84C]/15 mb-3">
                       {routeLoading ? (
                         <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-widest">
                           <Loader2 className="w-3 h-3 animate-spin" /> Calculating route…
                         </div>
                       ) : routeInfo ? (
                         <>
-                          <Navigation2 className="w-3.5 h-3.5 text-[#F2E147]/60 shrink-0" />
+                          <Navigation2 className="w-3.5 h-3.5 text-[#C9A84C]/60 shrink-0" />
                           <div className="text-center">
-                            <p className="font-black text-sm text-[#F2E147] leading-none">{routeInfo.distanceMiles.toFixed(1)}</p>
+                            <p className="font-black text-sm text-[#C9A84C] leading-none">{routeInfo.distanceMiles.toFixed(1)}</p>
                             <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold">miles</p>
                           </div>
                           <div className="w-px h-5 bg-white/10" />
@@ -667,14 +667,14 @@ export default function Bookings() {
                       <button
                         type="button"
                         onClick={() => autoFillPrice(createForm.vehicleType, createForm.service, createForm.hours, createForm)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase border border-[#F2E147]/30 text-[#F2E147]/70 hover:text-[#F2E147] hover:border-[#F2E147]/60 transition-colors"
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase border border-[#C9A84C]/30 text-[#C9A84C]/70 hover:text-[#C9A84C] hover:border-[#C9A84C]/60 transition-colors"
                       >
                         <Zap className="w-3 h-3" /> Auto-fill Price
                       </button>
                     )}
                   </div>
                   {pricing.length > 0 && createForm.vehicleType && (
-                    <div className="mb-3 px-3 py-2 bg-[#F2E147]/5 border border-[#F2E147]/10 text-[10px] text-[#F2E147]/60">
+                    <div className="mb-3 px-3 py-2 bg-[#C9A84C]/5 border border-[#C9A84C]/10 text-[10px] text-[#C9A84C]/60">
                       {(() => {
                         const p = pricing.find((row: any) => row.vehicleType === createForm.vehicleType);
                         if (!p) return null;
@@ -718,7 +718,7 @@ export default function Bookings() {
                     </Field>
                   </div>
                   <p className="text-[10px] text-white/20 mt-1.5">
-                    Calculated total: <span className="text-[#F2E147] font-bold">${computedTotal().toFixed(2)}</span>
+                    Calculated total: <span className="text-[#C9A84C] font-bold">${computedTotal().toFixed(2)}</span>
                     {" "}(leave Total Override blank to use this)
                   </p>
                 </div>
@@ -754,12 +754,12 @@ export default function Bookings() {
                   <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Add-ons & Notes</p>
                   <div className="flex gap-5 mb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" className="accent-[#F2E147]"
+                      <input type="checkbox" className="accent-[#C9A84C]"
                         checked={createForm.meetAndGreet} onChange={e => setField("meetAndGreet", e.target.checked)} />
                       <span className="text-xs text-white/60">Meet & Greet</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" className="accent-[#F2E147]"
+                      <input type="checkbox" className="accent-[#C9A84C]"
                         checked={createForm.childSeat} onChange={e => setField("childSeat", e.target.checked)} />
                       <span className="text-xs text-white/60">Child Seat</span>
                     </label>
@@ -801,7 +801,7 @@ export default function Bookings() {
               className="w-full max-w-xl bg-[#0a0a0a] border border-white/[0.07] max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
                 <div>
-                  <span className="font-mono text-sm font-bold text-[#F2E147]">{selected.confirmationCode}</span>
+                  <span className="font-mono text-sm font-bold text-[#C9A84C]">{selected.confirmationCode}</span>
                   <p className="text-white/30 text-xs mt-0.5">{selected.passengerName}</p>
                 </div>
                 <button onClick={() => setSelected(null)} className="text-white/30 hover:text-white transition-colors">
@@ -842,7 +842,7 @@ export default function Bookings() {
                     {selected.tollsAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Tolls</span><span className="text-white">${selected.tollsAmount?.toFixed(2)}</span></div>}
                     <div className="flex justify-between border-t border-white/[0.05] pt-2 font-bold">
                       <span className="text-white/60">Total</span>
-                      <span className="text-[#F2E147] text-sm">${selected.totalAmount?.toFixed(2)}</span>
+                      <span className="text-[#C9A84C] text-sm">${selected.totalAmount?.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -865,7 +865,7 @@ export default function Bookings() {
                     <select
                       value={driverAssign}
                       onChange={e => handleDriverChange(e.target.value)}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white px-3 py-2.5 outline-none transition-colors"
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white px-3 py-2.5 outline-none transition-colors"
                       style={{ colorScheme: "dark" }}
                     >
                       <option value="">No driver assigned</option>
@@ -886,7 +886,7 @@ export default function Bookings() {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
                       <input type="number" step="0.01" min="0" value={adminPrice}
                         onChange={e => setAdminPrice(e.target.value)}
-                        className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 pl-7 pr-3 py-2.5 outline-none transition-colors"
+                        className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 pl-7 pr-3 py-2.5 outline-none transition-colors"
                         placeholder={selected?.totalAmount?.toFixed(2) ?? "0.00"} />
                     </div>
                     <p className="text-[10px] text-white/20 mt-1">Leave blank to keep original price. Current: {selected?.totalAmount?.toFixed(2) ?? "0.00"}</p>
@@ -895,7 +895,7 @@ export default function Bookings() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-2">Internal Notes</label>
                     <textarea rows={2} value={adminNotes} onChange={e => setAdminNotes(e.target.value)}
-                      className="w-full bg-[#111] border border-white/10 focus:border-[#F2E147] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none resize-none transition-colors"
+                      className="w-full bg-[#111] border border-white/10 focus:border-[#C9A84C] text-sm text-white placeholder-white/20 px-3 py-2.5 outline-none resize-none transition-colors"
                       placeholder="Instructions for the driver…" />
                   </div>
 

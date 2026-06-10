@@ -145,6 +145,31 @@ export default function Bookings() {
   const [routeInfo, setRouteInfo] = useState<{ distanceMiles: number; durationMin: number } | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
 
+  // Edit form state for detail modal
+  const [editPassengerName, setEditPassengerName] = useState("");
+  const [editPassengerPhone, setEditPassengerPhone] = useState("");
+  const [editPassengerEmail, setEditPassengerEmail] = useState("");
+  const [editService, setEditService] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editPickupAddress, setEditPickupAddress] = useState("");
+  const [editDropoffAddress, setEditDropoffAddress] = useState("");
+  const [editPassengers, setEditPassengers] = useState<number>(1);
+  const [editBags, setEditBags] = useState<number>(1);
+  const [editHours, setEditHours] = useState("");
+  const [editVehicleType, setEditVehicleType] = useState("");
+  const [editFlightNumber, setEditFlightNumber] = useState("");
+  const [editFlightType, setEditFlightType] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editMeetAndGreet, setEditMeetAndGreet] = useState(false);
+  const [editChildSeat, setEditChildSeat] = useState(false);
+  const [editBaseAmount, setEditBaseAmount] = useState("");
+  const [editMileageAmount, setEditMileageAmount] = useState("");
+  const [editSurchargesAmount, setEditSurchargesAmount] = useState("");
+  const [editTollsAmount, setEditTollsAmount] = useState("");
+  const [editPromoCode, setEditPromoCode] = useState("");
+  const [editPromoDiscount, setEditPromoDiscount] = useState("");
+
   const load = () => {
     setLoading(true);
     const params: Record<string, string> = {};
@@ -239,10 +264,33 @@ export default function Bookings() {
     setSelected(b);
     setDriverAssign(b.driverId != null ? String(b.driverId) : "");
     setAdminNotes(b.adminNotes ?? "");
-      setAdminPrice(b.totalAmount != null ? String(b.totalAmount.toFixed(2)) : "");
+    setAdminPrice(b.totalAmount != null ? String(b.totalAmount.toFixed(2)) : "");
     setSelectedStatus(b.status);
     setSaveError("");
     setResendMsg(null);
+    setEditPassengerName(b.passengerName ?? "");
+    setEditPassengerPhone(b.passengerPhone ?? "");
+    setEditPassengerEmail(b.passengerEmail ?? "");
+    setEditService(b.service ?? "airport");
+    setEditDate(b.date ?? "");
+    setEditTime(b.time ?? "");
+    setEditPickupAddress(b.pickupAddress ?? "");
+    setEditDropoffAddress(b.dropoffAddress ?? "");
+    setEditPassengers(b.passengers ?? 1);
+    setEditBags(b.bags ?? 1);
+    setEditHours(b.hours != null ? String(b.hours) : "");
+    setEditVehicleType(b.vehicleType ?? "sedan");
+    setEditFlightNumber(b.flightNumber ?? "");
+    setEditFlightType(b.flightType ?? "");
+    setEditNotes(b.notes ?? "");
+    setEditMeetAndGreet(b.meetAndGreet ?? false);
+    setEditChildSeat(b.childSeat ?? false);
+    setEditBaseAmount(b.baseAmount != null ? String(b.baseAmount) : "");
+    setEditMileageAmount(b.mileageAmount != null ? String(b.mileageAmount) : "");
+    setEditSurchargesAmount(b.surchargesAmount != null ? String(b.surchargesAmount) : "");
+    setEditTollsAmount(b.tollsAmount != null ? String(b.tollsAmount) : "");
+    setEditPromoCode(b.promoCode ?? "");
+    setEditPromoDiscount(b.promoDiscount != null ? String(b.promoDiscount) : "");
   };
 
   const handleResendConfirmation = async () => {
@@ -306,16 +354,36 @@ export default function Bookings() {
         status: selectedStatus,
         driverId: driverAssign !== "" ? Number(driverAssign) : null,
         adminNotes,
+        passengerName: editPassengerName,
+        passengerPhone: editPassengerPhone,
+        passengerEmail: editPassengerEmail,
+        service: editService,
+        date: editDate,
+        time: editTime,
+        pickupAddress: editPickupAddress,
+        dropoffAddress: editDropoffAddress || null,
+        passengers: Number(editPassengers),
+        bags: Number(editBags),
+        hours: editHours ? Number(editHours) : null,
+        vehicleType: editVehicleType || null,
+        flightNumber: editFlightNumber || null,
+        flightType: editFlightType || null,
+        notes: editNotes || null,
+        meetAndGreet: editMeetAndGreet,
+        childSeat: editChildSeat,
+        baseAmount: parseFloat(editBaseAmount) || 0,
+        mileageAmount: parseFloat(editMileageAmount) || 0,
+        surchargesAmount: parseFloat(editSurchargesAmount) || 0,
+        tollsAmount: parseFloat(editTollsAmount) || 0,
+        promoCode: editPromoCode || null,
+        promoDiscount: parseFloat(editPromoDiscount) || 0,
       };
       if (adminPrice !== "" && !isNaN(Number(adminPrice)) && Number(adminPrice) > 0) {
         payload.totalAmount = Number(adminPrice);
       }
       const updated = await adminApi.bookings.update(selected.id, payload);
       setBookings(prev => prev.map(b => b.id === selected.id ? updated : b));
-      setSelected(updated);
-      setDriverAssign(updated.driverId != null ? String(updated.driverId) : "");
-      setAdminNotes(updated.adminNotes ?? "");
-      setSelectedStatus(updated.status);
+      openDetail(updated);
     } catch (e: any) { setSaveError(e?.message ?? "Error saving changes. Please try again."); } finally { setSaving(false); }
   };
 
@@ -810,41 +878,153 @@ export default function Bookings() {
               </div>
 
               <div className="p-5 space-y-5">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  {[
-                    ["Service", selected.service],
-                    ["Date", `${selected.date} ${selected.time}`],
-                    ["Passengers", selected.passengers],
-                    ["Bags", selected.bags],
-                    ["Pickup", selected.pickupAddress],
-                    ["Drop-off", selected.dropoffAddress ?? "—"],
-                    ["Flight", selected.flightNumber ?? "—"],
-                    ["Vehicle", selected.vehicleType ?? "—"],
-                  ].map(([k, v]) => (
-                    <div key={String(k)}>
-                      <p className="text-[10px] uppercase tracking-widest text-white/20 mb-1 font-bold">{k}</p>
-                      <p className="text-white/70">{v}</p>
-                    </div>
-                  ))}
+
+                {/* Passenger Information */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Passenger Information</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Field label="Full Name *">
+                      <input required className={inputCls} placeholder="John Smith"
+                        value={editPassengerName} onChange={e => setEditPassengerName(e.target.value)} />
+                    </Field>
+                    <Field label="Phone *">
+                      <input required className={inputCls} placeholder="+1 (555) 000-0000"
+                        value={editPassengerPhone} onChange={e => setEditPassengerPhone(e.target.value)} />
+                    </Field>
+                    <Field label="Email *">
+                      <input required type="email" className={inputCls} placeholder="passenger@email.com"
+                        value={editPassengerEmail} onChange={e => setEditPassengerEmail(e.target.value)} />
+                    </Field>
+                  </div>
                 </div>
 
-                <div className="border-t border-white/[0.05] pt-4 grid grid-cols-2 gap-3 text-xs">
-                  <div><p className="text-[10px] uppercase tracking-widest text-white/20 mb-1 font-bold">Phone</p><p className="text-white/70">{selected.passengerPhone}</p></div>
-                  <div><p className="text-[10px] uppercase tracking-widest text-white/20 mb-1 font-bold">Email</p><p className="text-white/70">{selected.passengerEmail}</p></div>
+                {/* Trip Details */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Trip Details</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                    <Field label="Service *">
+                      <select required className={selectCls} style={{ colorScheme: "dark" }}
+                        value={editService} onChange={e => setEditService(e.target.value)}>
+                        {SERVICE_TYPES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Date *">
+                      <input required type="date" className={inputCls} style={{ colorScheme: "dark" }}
+                        value={editDate} onChange={e => setEditDate(e.target.value)} />
+                    </Field>
+                    <Field label="Time *">
+                      <input required type="time" className={inputCls} style={{ colorScheme: "dark" }}
+                        value={editTime} onChange={e => setEditTime(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <Field label="Pickup Address *">
+                      <PlacesInput required className={inputCls} placeholder="123 Main St, Newark NJ"
+                        value={editPickupAddress}
+                        onChange={v => setEditPickupAddress(v)}
+                      />
+                    </Field>
+                    <Field label="Drop-off Address">
+                      <PlacesInput className={inputCls} placeholder="EWR Airport — Terminal A"
+                        value={editDropoffAddress}
+                        onChange={v => setEditDropoffAddress(v)}
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Field label="Vehicle">
+                      <select className={selectCls} style={{ colorScheme: "dark" }}
+                        value={editVehicleType} onChange={e => setEditVehicleType(e.target.value)}>
+                        {VEHICLE_TYPES.map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Passengers">
+                      <input type="number" min={1} max={20} className={inputCls}
+                        value={editPassengers} onChange={e => setEditPassengers(Number(e.target.value))} />
+                    </Field>
+                    <Field label="Bags">
+                      <input type="number" min={0} max={20} className={inputCls}
+                        value={editBags} onChange={e => setEditBags(Number(e.target.value))} />
+                    </Field>
+                    <Field label="Hours (hourly)">
+                      <input type="number" min={1} className={inputCls} placeholder="—"
+                        value={editHours} onChange={e => setEditHours(e.target.value)} />
+                    </Field>
+                  </div>
                 </div>
 
-                <div className="border-t border-white/[0.05] pt-4">
-                  <p className="text-[10px] uppercase tracking-widest text-white/20 mb-2 font-bold">Price Breakdown</p>
-                  <div className="space-y-1 text-xs">
-                    {selected.baseAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Base</span><span className="text-white">${selected.baseAmount?.toFixed(2)}</span></div>}
-                    {selected.mileageAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Mileage</span><span className="text-white">${selected.mileageAmount?.toFixed(2)}</span></div>}
-                    {selected.surchargesAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Surcharges</span><span className="text-white">${selected.surchargesAmount?.toFixed(2)}</span></div>}
-                    {selected.tollsAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Tolls</span><span className="text-white">${selected.tollsAmount?.toFixed(2)}</span></div>}
-                    <div className="flex justify-between border-t border-white/[0.05] pt-2 font-bold">
-                      <span className="text-white/60">Total</span>
-                      <span className="text-[#C9A84C] text-sm">${selected.totalAmount?.toFixed(2)}</span>
+                {/* Flight Info */}
+                {editService === "airport" && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Flight Information</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Flight Number">
+                        <input className={inputCls} placeholder="AA 1234"
+                          value={editFlightNumber} onChange={e => setEditFlightNumber(e.target.value)} />
+                      </Field>
+                      <Field label="Flight Type">
+                        <select className={selectCls} style={{ colorScheme: "dark" }}
+                          value={editFlightType} onChange={e => setEditFlightType(e.target.value)}>
+                          <option value="">—</option>
+                          {FLIGHT_TYPES.map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+                        </select>
+                      </Field>
                     </div>
                   </div>
+                )}
+
+                {/* Pricing */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Pricing</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    <Field label="Base ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={editBaseAmount} onChange={e => setEditBaseAmount(e.target.value)} />
+                    </Field>
+                    <Field label="Mileage ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={editMileageAmount} onChange={e => setEditMileageAmount(e.target.value)} />
+                    </Field>
+                    <Field label="Surcharges ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={editSurchargesAmount} onChange={e => setEditSurchargesAmount(e.target.value)} />
+                    </Field>
+                    <Field label="Tolls ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={editTollsAmount} onChange={e => setEditTollsAmount(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <Field label="Promo Code">
+                      <input className={inputCls} placeholder="LUXVIP"
+                        value={editPromoCode} onChange={e => setEditPromoCode(e.target.value)} />
+                    </Field>
+                    <Field label="Promo Discount ($)">
+                      <input type="number" min={0} step="0.01" className={inputCls} placeholder="0.00"
+                        value={editPromoDiscount} onChange={e => setEditPromoDiscount(e.target.value)} />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Add-ons & Notes */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Add-ons & Passenger Notes</p>
+                  <div className="flex gap-5 mb-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="accent-[#C9A84C]"
+                        checked={editMeetAndGreet} onChange={e => setEditMeetAndGreet(e.target.checked)} />
+                      <span className="text-xs text-white/60">Meet &amp; Greet</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="accent-[#C9A84C]"
+                        checked={editChildSeat} onChange={e => setEditChildSeat(e.target.checked)} />
+                      <span className="text-xs text-white/60">Child Seat</span>
+                    </label>
+                  </div>
+                  <Field label="Passenger Notes">
+                    <textarea rows={2} className={inputCls + " resize-none"} placeholder="Special instructions from passenger…"
+                      value={editNotes} onChange={e => setEditNotes(e.target.value)} />
+                  </Field>
                 </div>
 
                 <div className="border-t border-white/[0.05] pt-4 space-y-3">
@@ -929,12 +1109,6 @@ export default function Bookings() {
                   </div>
                 </div>
 
-                {selected.notes && (
-                  <div className="border-t border-white/[0.05] pt-4">
-                    <p className="text-[10px] uppercase tracking-widest text-white/20 mb-1 font-bold">Passenger Notes</p>
-                    <p className="text-xs text-white/50 italic">{selected.notes}</p>
-                  </div>
-                )}
               </div>
             </motion.div>
           </motion.div>

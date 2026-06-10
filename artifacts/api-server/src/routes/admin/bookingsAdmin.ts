@@ -45,7 +45,18 @@ router.get("/bookings/:id", requireAdmin, async (req, res) => {
 router.patch("/bookings/:id", requireAdmin, async (req, res) => {
   try {
     const bookingId = Number(req.params.id);
-    const { status, driverId, adminNotes, vehicleType, totalAmount: adminPrice } = req.body;
+    const {
+      status, driverId, adminNotes, vehicleType, totalAmount: adminPrice,
+      passengerName, passengerPhone, passengerEmail,
+      service, date, time,
+      pickupAddress, pickupLat, pickupLon,
+      dropoffAddress, dropoffLat, dropoffLon,
+      passengers, bags, hours,
+      flightNumber, flightType,
+      notes, meetAndGreet, childSeat,
+      baseAmount, mileageAmount, surchargesAmount, tollsAmount,
+      promoCode, promoDiscount, distanceMiles,
+    } = req.body;
 
     const [current] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     if (!current) { res.status(404).json({ error: "Not found" }); return; }
@@ -56,6 +67,33 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (vehicleType !== undefined) updates.vehicleType = vehicleType;
     if (adminPrice !== undefined && !isNaN(Number(adminPrice))) updates.totalAmount = Number(adminPrice);
+    if (passengerName !== undefined) updates.passengerName = passengerName;
+    if (passengerPhone !== undefined) updates.passengerPhone = passengerPhone;
+    if (passengerEmail !== undefined) updates.passengerEmail = passengerEmail;
+    if (service !== undefined) updates.service = service;
+    if (date !== undefined) updates.date = date;
+    if (time !== undefined) updates.time = time;
+    if (pickupAddress !== undefined) updates.pickupAddress = pickupAddress;
+    if (pickupLat !== undefined) updates.pickupLat = pickupLat;
+    if (pickupLon !== undefined) updates.pickupLon = pickupLon;
+    if (dropoffAddress !== undefined) updates.dropoffAddress = dropoffAddress;
+    if (dropoffLat !== undefined) updates.dropoffLat = dropoffLat;
+    if (dropoffLon !== undefined) updates.dropoffLon = dropoffLon;
+    if (passengers !== undefined) updates.passengers = Number(passengers);
+    if (bags !== undefined) updates.bags = Number(bags);
+    if (hours !== undefined) updates.hours = hours !== null ? Number(hours) : null;
+    if (flightNumber !== undefined) updates.flightNumber = flightNumber;
+    if (flightType !== undefined) updates.flightType = flightType;
+    if (notes !== undefined) updates.notes = notes;
+    if (meetAndGreet !== undefined) updates.meetAndGreet = meetAndGreet;
+    if (childSeat !== undefined) updates.childSeat = childSeat;
+    if (baseAmount !== undefined) updates.baseAmount = Number(baseAmount);
+    if (mileageAmount !== undefined) updates.mileageAmount = Number(mileageAmount);
+    if (surchargesAmount !== undefined) updates.surchargesAmount = Number(surchargesAmount);
+    if (tollsAmount !== undefined) updates.tollsAmount = Number(tollsAmount);
+    if (promoCode !== undefined) updates.promoCode = promoCode;
+    if (promoDiscount !== undefined) updates.promoDiscount = Number(promoDiscount);
+    if (distanceMiles !== undefined) updates.distanceMiles = distanceMiles;
 
     const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
 

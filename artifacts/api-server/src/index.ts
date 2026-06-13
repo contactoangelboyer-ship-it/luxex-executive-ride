@@ -18,24 +18,24 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-async function runStartupMigrations() {
+// Run migration in background after server is up — never blocks startup
+function runMigrationsInBackground() {
   if (!db) return;
-  try {
-    await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS trip_type VARCHAR(20)`);
-    logger.info("Startup migration: trip_type column ensured");
-  } catch (err) {
-    logger.warn({ err }, "Startup migration warning (non-fatal)");
-  }
+  const timeout = setTimeout(() => {
+    logger.warn("Startup migration timed out (non-fatal)");
+  }, 10_000);
+  db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS trip_type VARCHAR(20)`)
+    .then(() => { clearTimeout(timeout); logger.info("Startup migration: trip_type ensured"); })
+    .catch((err) => { clearTimeout(timeout); logger.warn({ err }, "Startup migration warning (non-fatal)"); });
 }
 
-runStartupMigrations().then(() => {
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
+app.listen(port, (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
+  }
 
-    logger.info({ port }, "Server listening");
-    startScheduler();
-  });
+  logger.info({ port }, "Server listening");
+  startScheduler();
+  runMigrationsInBackground();
 });

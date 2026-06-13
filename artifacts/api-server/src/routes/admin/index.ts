@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { db, bookings, adminDrivers, vehicles, pricingConfig, zones, promotions, adminUsers } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, getTableColumns } from "drizzle-orm";
 import { requireAdmin, signToken } from "../../middlewares/adminAuth";
 import {
   sendCustomerConfirmation,
@@ -136,12 +136,15 @@ router.use(requireAdmin);
 // Await migration before any authenticated route executes
 router.use(async (_req, _res, next) => { await _tripTypeReady; next(); });
 
+// Use explicit column selection for bookings queries (future-proof for schema changes)
+const bookingCols = getTableColumns(bookings);
+
 router.get("/dashboard", async (_req, res) => {
   try {
     await ensureDefaults().catch(() => {});
     const today = new Date().toISOString().slice(0, 10);
     const [allBookings, allDrivers, allVehicles] = await Promise.all([
-      db.select().from(bookings).orderBy(desc(bookings.createdAt)),
+      db.select(bookingCols).from(bookings).orderBy(desc(bookings.createdAt)),
       db.select().from(adminDrivers),
       db.select().from(vehicles),
     ]);
@@ -164,7 +167,7 @@ router.get("/dashboard", async (_req, res) => {
 router.get("/bookings", async (req, res) => {
   try {
     const { status } = req.query;
-    const rows = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
+    const rows = await db.select(bookingCols).from(bookings).orderBy(desc(bookings.createdAt));
     const filtered = status ? rows.filter(b => b.status === status) : rows;
     res.json(filtered);
   } catch (err: any) {
@@ -174,7 +177,7 @@ router.get("/bookings", async (req, res) => {
 
 router.get("/bookings/:id", async (req, res) => {
   try {
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, Number(req.params.id)));
+    const [booking] = await db.select(bookingCols).from(bookings).where(eq(bookings.id, Number(req.params.id)));
     if (!booking) { res.status(404).json({ error: "Booking not found" }); return; }
     res.json(booking);
   } catch (err: any) {
@@ -198,7 +201,7 @@ router.patch("/bookings/:id", async (req, res) => {
       promoCode, promoDiscount, distanceMiles,
     } = req.body;
 
-    const [current] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    const [current] = await db.select(bookingCols).from(bookings).where(eq(bookings.id, bookingId));
     if (!current) { res.status(404).json({ error: "Booking not found" }); return; }
 
     const updates: Record<string, any> = { updatedAt: new Date() };
@@ -235,7 +238,7 @@ router.patch("/bookings/:id", async (req, res) => {
     if (promoDiscount !== undefined) updates.promoDiscount = Number(promoDiscount);
     if (distanceMiles !== undefined) updates.distanceMiles = distanceMiles;
 
-    const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning();
+    const [updated] = await db.update(bookings).set(updates).where(eq(bookings.id, bookingId)).returning(bookingCols);
 
     const driverChanged = driverId !== undefined && driverId !== current.driverId && driverId !== null;
     const statusChanged = status !== undefined && status !== current.status;
@@ -266,9 +269,9 @@ router.patch("/bookings/:id", async (req, res) => {
 
 router.post("/bookings", async (req, res) => {
   try {
-    const body = req.body;
+    const { tripType: _t, ...body } = req.body;
     const code = "LX-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-    const [booking] = await db.insert(bookings).values({ ...body, confirmationCode: code, status: body.status ?? "pending" }).returning();
+    const [booking] = await db.insert(bookings).values({ ...body, confirmationCode: code, status: body.status ?? "pending" }).returning(bookingCols);
     const createEmailTasks: Promise<unknown>[] = [
       sendCustomerConfirmation(booking).catch(() => {}),
       sendAdminNotification(booking).catch(() => {}),

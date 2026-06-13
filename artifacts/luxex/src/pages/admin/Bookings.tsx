@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap, Navigation2 } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap, Navigation2, Bell, Clock, CalendarDays } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
@@ -73,6 +73,36 @@ const STATUS_LABELS: Record<string, string> = {
 const VEHICLE_TYPES = ["sedan", "suv", "van", "sprinter", "limo"];
 const SERVICE_TYPES = ["airport", "corporate", "hourly", "event"];
 const FLIGHT_TYPES = ["arrival", "departure"];
+
+// ── Date / grouping helpers ────────────────────────────────────────────────
+function getTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateSection(dateStr: string): string {
+  const today = getTodayStr();
+  const dn = new Date(); dn.setDate(dn.getDate() + 1);
+  const tomorrow = `${dn.getFullYear()}-${String(dn.getMonth() + 1).padStart(2, "0")}-${String(dn.getDate()).padStart(2, "0")}`;
+  if (dateStr === today) return "Today";
+  if (dateStr === tomorrow) return "Tomorrow";
+  const [y, mo, day] = dateStr.split("-").map(Number);
+  return new Date(y, mo - 1, day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function isActiveStatus(status: string): boolean {
+  return ["pending", "confirmed", "assigned", "in_progress"].includes(status);
+}
+
+function minutesUntilTrip(date: string, time: string | null): number | null {
+  if (!time) return null;
+  const today = getTodayStr();
+  if (date !== today) return null;
+  const [h, m] = time.split(":").map(Number);
+  const tripMs = new Date();
+  tripMs.setHours(h, m, 0, 0);
+  return Math.round((tripMs.getTime() - Date.now()) / 60000);
+}
 
 const EMPTY_FORM = {
   service: "airport",
@@ -259,6 +289,81 @@ export default function Bookings() {
     return b.passengerName?.toLowerCase().includes(s) || b.confirmationCode?.toLowerCase().includes(s)
       || b.pickupAddress?.toLowerCase().includes(s) || b.passengerPhone?.includes(s);
   });
+
+  // Sort: active trips by date/time ASC (today first), completed/cancelled at bottom by date DESC
+  const today = getTodayStr();
+  const sorted = [...filtered].sort((a, b) => {
+    const aActive = isActiveStatus(a.status);
+    const bActive = isActiveStatus(b.status);
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    if (aActive) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.time ?? "") < (b.time ?? "") ? -1 : 1;
+    }
+    if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+    return (a.time ?? "") > (b.time ?? "") ? -1 : 1;
+  });
+
+  // Group into date sections
+  const dateGroups: { key: string; label: string; isToday: boolean; items: any[] }[] = [];
+  for (const b of sorted) {
+    const isActive = isActiveStatus(b.status);
+    if (!isActive) {
+      const last = dateGroups[dateGroups.length - 1];
+      if (last?.key === "__archive__") { last.items.push(b); }
+      else { dateGroups.push({ key: "__archive__", label: "Completed & Cancelled", isToday: false, items: [b] }); }
+    } else {
+      const last = dateGroups[dateGroups.length - 1];
+      if (last?.key === b.date) { last.items.push(b); }
+      else { dateGroups.push({ key: b.date, label: formatDateSection(b.date), isToday: b.date === today, items: [b] }); }
+    }
+  }
+
+  // Today's active trips for the reminder banner
+  const todayActiveTrips = bookings.filter(b => b.date === today && isActiveStatus(b.status));
+  // Trips starting within the next 2 hours
+  const upcomingSoon = todayActiveTrips.filter(b => {
+    const mins = minutesUntilTrip(b.date, b.time);
+    return mins !== null && mins >= 0 && mins <= 120;
+  });
+
+  const setReminder = (b: any) => {
+    if (b.date !== today || !b.time) {
+      alert(`Recordatorio guardado:\n${b.passengerName} — ${b.date} a las ${b.time ?? "TBD"}\n${b.pickupAddress}`);
+      return;
+    }
+    const [h, m] = b.time.split(":").map(Number);
+    const tripTime = new Date(); tripTime.setHours(h, m, 0, 0);
+    const reminderMs = tripTime.getTime() - 30 * 60 * 1000;
+    const msUntil = reminderMs - Date.now();
+    const scheduleNotif = () => {
+      if (msUntil > 0) {
+        setTimeout(() => {
+          new Notification(`Viaje en 30 min — ${b.passengerName}`, {
+            body: `${b.time} · ${b.pickupAddress}`,
+            icon: "/favicon.ico",
+          });
+        }, msUntil);
+        alert(`✓ Recordatorio activado. Recibirás una notificación 30 minutos antes del viaje a las ${b.time}.`);
+      } else {
+        const mins = minutesUntilTrip(b.date, b.time);
+        if (mins !== null && mins > 0) {
+          alert(`El viaje es en ${mins} minutos — ¡comienza pronto!\n${b.passengerName} — ${b.pickupAddress}`);
+        } else {
+          alert(`Este viaje ya inició o está pasando ahora.\n${b.passengerName} — ${b.time}`);
+        }
+      }
+    };
+    if (!("Notification" in window)) {
+      alert(`Recordatorio: Viaje a las ${b.time} para ${b.passengerName}\n${b.pickupAddress}`);
+    } else if (Notification.permission === "granted") {
+      scheduleNotif();
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(p => { if (p === "granted") scheduleNotif(); else alert(`Recordatorio: ${b.passengerName} a las ${b.time}`); });
+    } else {
+      alert(`Recordatorio: Viaje a las ${b.time} para ${b.passengerName}\n${b.pickupAddress}`);
+    }
+  };
 
   const openDetail = (b: any) => {
     setSelected(b);
@@ -518,12 +623,51 @@ export default function Bookings() {
           </div>
         </div>
 
+        {/* ── Today's Trips Banner ───────────────────────────────────────────── */}
+        {!loading && todayActiveTrips.length > 0 && (
+          <div className="border border-[#C9A84C]/25 bg-[#C9A84C]/5 px-4 py-3 flex items-center gap-3 flex-wrap">
+            <CalendarDays className="w-4 h-4 text-[#C9A84C] shrink-0" />
+            <div className="flex-1">
+              <span className="text-[#C9A84C] text-xs font-bold uppercase tracking-widest">
+                {todayActiveTrips.length} viaje{todayActiveTrips.length !== 1 ? "s" : ""} programado{todayActiveTrips.length !== 1 ? "s" : ""} para hoy
+              </span>
+              {upcomingSoon.length > 0 && (
+                <span className="ml-3 text-[10px] text-white/50">
+                  · {upcomingSoon.length} comienza{upcomingSoon.length !== 1 ? "n" : ""} en las próximas 2 horas
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {todayActiveTrips.slice(0, 3).map(b => {
+                const mins = minutesUntilTrip(b.date, b.time);
+                return (
+                  <div key={b.id} className="flex items-center gap-1.5 bg-black/30 border border-white/[0.06] px-2.5 py-1">
+                    <Clock className="w-3 h-3 text-white/30" />
+                    <span className="text-[11px] text-white/60 font-mono">{b.time ?? "—"}</span>
+                    <span className="text-[11px] text-white/40">{b.passengerName?.split(" ")[0]}</span>
+                    {mins !== null && mins >= 0 && mins <= 120 && (
+                      <span className="text-[10px] font-bold text-amber-400 ml-1">{mins}m</span>
+                    )}
+                    <button onClick={() => setReminder(b)} title="Poner recordatorio"
+                      className="ml-1 text-[#C9A84C]/50 hover:text-[#C9A84C] transition-colors">
+                      <Bell className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
+              {todayActiveTrips.length > 3 && (
+                <span className="text-[11px] text-white/30 self-center">+{todayActiveTrips.length - 3} más</span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="bg-[#0f0f0f] border border-white/[0.06] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.04]">
-                  {["Code", "Passenger", "Phone", "Service", "Pickup", "Date", "Vehicle", "Driver", "Total", "Status", "Actions"].map(h => (
+                  {["Code", "Passenger", "Phone", "Service", "Pickup", "Date / Time", "Vehicle", "Driver", "Total", "Status", "Actions"].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-[10px] font-bold tracking-widest uppercase text-white/20 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -531,57 +675,97 @@ export default function Bookings() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={11} className="text-center py-10"><Loader2 className="w-5 h-5 animate-spin text-white/20 mx-auto" /></td></tr>
-                ) : filtered.length === 0 ? (
+                ) : sorted.length === 0 ? (
                   <tr><td colSpan={11} className="text-center py-10 text-white/20 text-xs">No bookings found</td></tr>
-                ) : filtered.map(b => {
-                  const driver = drivers.find(d => d.id === b.driverId);
-                  return (
-                    <tr key={b.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onClick={() => openDetail(b)}>
-                      <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C] whitespace-nowrap">{b.confirmationCode}</td>
-                      <td className="px-4 py-3 text-xs text-white font-medium whitespace-nowrap">{b.passengerName}</td>
-                      <td className="px-4 py-3 text-xs text-white/40 whitespace-nowrap">{b.passengerPhone}</td>
-                      <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.service}</td>
-                      <td className="px-4 py-3 text-xs text-white/40 max-w-[140px] truncate">{b.pickupAddress}</td>
-                      <td className="px-4 py-3 text-xs text-white/50 whitespace-nowrap">{b.date} {b.time}</td>
-                      <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.vehicleType ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-white/50 whitespace-nowrap">{driver?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-white whitespace-nowrap">${(b.totalAmount ?? 0).toFixed(0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 border ${STATUS_COLORS[b.status] ?? "text-white/30 border-white/10"}`}>
-                          {STATUS_LABELS[b.status] ?? b.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                        <div className="flex gap-1">
-                          {b.status === "pending" && (
-                            <button onClick={() => quickUpdateStatus(b.id, "confirmed")} title="Confirm"
-                              className="p-1.5 border border-green-400/20 text-green-400 hover:bg-green-400/10 transition-colors">
-                              <CheckCircle className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {["pending", "confirmed", "assigned"].includes(b.status) && (
-                            <button onClick={() => quickUpdateStatus(b.id, "cancelled")} title="Cancel"
-                              className="p-1.5 border border-red-400/20 text-red-400 hover:bg-red-400/10 transition-colors">
-                              <XCircle className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {b.status === "assigned" && (
-                            <button onClick={() => quickUpdateStatus(b.id, "in_progress")} title="Start trip"
-                              className="p-1.5 border border-blue-400/20 text-blue-400 hover:bg-blue-400/10 transition-colors">
-                              <Car className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {b.status === "in_progress" && (
-                            <button onClick={() => quickUpdateStatus(b.id, "completed")} title="Complete"
-                              className="p-1.5 border border-white/10 text-white/40 hover:bg-white/5 transition-colors">
-                              <CheckCircle className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                ) : dateGroups.map(group => (
+                  <>
+                    {/* Date section header */}
+                    <tr key={`hdr-${group.key}`} className={group.isToday ? "border-b border-[#C9A84C]/20" : "border-b border-white/[0.04]"}>
+                      <td colSpan={11} className={`px-4 py-2 ${group.isToday ? "bg-[#C9A84C]/8" : group.key === "__archive__" ? "bg-white/[0.015]" : "bg-white/[0.02]"}`}>
+                        <div className="flex items-center gap-2">
+                          {group.isToday
+                            ? <CalendarDays className="w-3 h-3 text-[#C9A84C]" />
+                            : group.key === "__archive__"
+                            ? <CheckCircle className="w-3 h-3 text-white/20" />
+                            : <Clock className="w-3 h-3 text-white/25" />
+                          }
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${group.isToday ? "text-[#C9A84C]" : group.key === "__archive__" ? "text-white/20" : "text-white/30"}`}>
+                            {group.label}
+                          </span>
+                          <span className={`text-[9px] font-bold ml-1 ${group.isToday ? "text-[#C9A84C]/50" : "text-white/15"}`}>
+                            — {group.items.length} viaje{group.items.length !== 1 ? "s" : ""}
+                          </span>
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
+                    {/* Booking rows for this group */}
+                    {group.items.map(b => {
+                      const driver = drivers.find(d => d.id === b.driverId);
+                      const mins = minutesUntilTrip(b.date, b.time);
+                      const isSoon = mins !== null && mins >= 0 && mins <= 60;
+                      return (
+                        <tr key={b.id}
+                          className={`border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer ${isSoon ? "bg-amber-400/[0.03]" : ""}`}
+                          onClick={() => openDetail(b)}>
+                          <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C] whitespace-nowrap">{b.confirmationCode}</td>
+                          <td className="px-4 py-3 text-xs text-white font-medium whitespace-nowrap">
+                            {b.passengerName}
+                            {isSoon && <span className="ml-1.5 text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1 py-0.5">en {mins}m</span>}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-white/40 whitespace-nowrap">{b.passengerPhone}</td>
+                          <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.service}</td>
+                          <td className="px-4 py-3 text-xs text-white/40 max-w-[140px] truncate">{b.pickupAddress}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">
+                            <span className={group.isToday ? "text-[#C9A84C]/80 font-bold" : "text-white/50"}>{b.date}</span>
+                            <span className="text-white/30 ml-1">{b.time}</span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.vehicleType ?? "—"}</td>
+                          <td className="px-4 py-3 text-xs text-white/50 whitespace-nowrap">{driver?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-white whitespace-nowrap">${(b.totalAmount ?? 0).toFixed(0)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 border ${STATUS_COLORS[b.status] ?? "text-white/30 border-white/10"}`}>
+                              {STATUS_LABELS[b.status] ?? b.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                            <div className="flex gap-1">
+                              {isActiveStatus(b.status) && (
+                                <button onClick={() => setReminder(b)} title="Poner recordatorio"
+                                  className="p-1.5 border border-[#C9A84C]/15 text-[#C9A84C]/40 hover:text-[#C9A84C] hover:border-[#C9A84C]/40 transition-colors">
+                                  <Bell className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {b.status === "pending" && (
+                                <button onClick={() => quickUpdateStatus(b.id, "confirmed")} title="Confirm"
+                                  className="p-1.5 border border-green-400/20 text-green-400 hover:bg-green-400/10 transition-colors">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {["pending", "confirmed", "assigned"].includes(b.status) && (
+                                <button onClick={() => quickUpdateStatus(b.id, "cancelled")} title="Cancel"
+                                  className="p-1.5 border border-red-400/20 text-red-400 hover:bg-red-400/10 transition-colors">
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {b.status === "assigned" && (
+                                <button onClick={() => quickUpdateStatus(b.id, "in_progress")} title="Start trip"
+                                  className="p-1.5 border border-blue-400/20 text-blue-400 hover:bg-blue-400/10 transition-colors">
+                                  <Car className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {b.status === "in_progress" && (
+                                <button onClick={() => quickUpdateStatus(b.id, "completed")} title="Complete"
+                                  className="p-1.5 border border-white/10 text-white/40 hover:bg-white/5 transition-colors">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
               </tbody>
             </table>
           </div>

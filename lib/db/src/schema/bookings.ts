@@ -6,7 +6,6 @@ export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   confirmationCode: varchar("confirmation_code", { length: 12 }).notNull(),
   service: varchar("service", { length: 50 }).notNull(),
-  tripType: varchar("trip_type", { length: 20 }),
   status: varchar("status", { length: 30 }).notNull().default("pending"),
   pickupAddress: text("pickup_address").notNull(),
   pickupLat: doublePrecision("pickup_lat"),

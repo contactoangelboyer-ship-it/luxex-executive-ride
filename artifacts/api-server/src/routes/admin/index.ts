@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { db, bookings, adminDrivers, vehicles, pricingConfig, zones, promotions, adminUsers } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { requireAdmin, signToken } from "../../middlewares/adminAuth";
 import {
   sendCustomerConfirmation,
@@ -10,6 +10,16 @@ import {
   sendStatusUpdate,
   sendPostTripSummary,
 } from "../../lib/mailer";
+
+// Module-level migration — runs on first import, before any request is handled.
+// ALTER TABLE … IF NOT EXISTS is idempotent and fast (~1 ms) once the column exists.
+const _tripTypeReady: Promise<void> = (() => {
+  if (!db) return Promise.resolve();
+  return db
+    .execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS trip_type VARCHAR(20)`)
+    .then(() => {})
+    .catch(() => {});
+})();
 
 const router = Router();
 
@@ -122,6 +132,9 @@ router.post("/auth/reset-password", async (req, res) => {
 });
 
 router.use(requireAdmin);
+
+// Await migration before any authenticated route executes
+router.use(async (_req, _res, next) => { await _tripTypeReady; next(); });
 
 router.get("/dashboard", async (_req, res) => {
   try {

@@ -45,6 +45,33 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
 
     const recentBookings = await db.select().from(bookings).orderBy(desc(bookings.createdAt)).limit(10);
 
+    // Smart alerts
+    const [unassignedTodayResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(bookings)
+      .where(sql`date = ${today} AND status IN ('pending','confirmed') AND driver_id IS NULL`);
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const [stalePendingResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(bookings)
+      .where(sql`status = 'pending' AND created_at < ${oneHourAgo}`);
+
+    // Upcoming trips (today + next 7 days) that have a driver assigned → used for conflict detection on frontend
+    const upcomingAssigned = await db
+      .select({
+        id: bookings.id,
+        confirmationCode: bookings.confirmationCode,
+        passengerName: bookings.passengerName,
+        date: bookings.date,
+        time: bookings.time,
+        status: bookings.status,
+        driverId: bookings.driverId,
+      })
+      .from(bookings)
+      .where(sql`date >= ${today} AND driver_id IS NOT NULL AND status IN ('assigned','confirmed','in_progress')`)
+      .orderBy(bookings.date, bookings.time);
+
     res.json({
       dbConfigured: true,
       stats: {
@@ -57,6 +84,11 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
         activeVehicles: Number(totalVehiclesResult.count),
         totalRevenue: Number(revenueResult[0]?.total ?? 0),
         todayRevenue: Number(todayRevenueResult[0]?.total ?? 0),
+      },
+      alerts: {
+        unassignedToday: Number(unassignedTodayResult?.count ?? 0),
+        stalePending: Number(stalePendingResult?.count ?? 0),
+        upcomingAssigned,
       },
       recentBookings,
     });

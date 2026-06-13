@@ -104,6 +104,11 @@ function minutesUntilTrip(date: string, time: string | null): number | null {
   return Math.round((tripMs.getTime() - Date.now()) / 60000);
 }
 
+function isNewBooking(b: any): boolean {
+  if (!b.createdAt) return false;
+  return (Date.now() - new Date(b.createdAt).getTime()) < 24 * 60 * 60 * 1000 && b.status === "pending";
+}
+
 const EMPTY_FORM = {
   service: "airport",
   pickupAddress: "",
@@ -135,6 +140,7 @@ const EMPTY_FORM = {
   promoDiscount: "",
   driverId: "",
   status: "pending",
+  tripType: "",
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -199,6 +205,7 @@ export default function Bookings() {
   const [editTollsAmount, setEditTollsAmount] = useState("");
   const [editPromoCode, setEditPromoCode] = useState("");
   const [editPromoDiscount, setEditPromoDiscount] = useState("");
+  const [editTripType, setEditTripType] = useState("");
 
   const load = () => {
     setLoading(true);
@@ -396,6 +403,7 @@ export default function Bookings() {
     setEditTollsAmount(b.tollsAmount != null ? String(b.tollsAmount) : "");
     setEditPromoCode(b.promoCode ?? "");
     setEditPromoDiscount(b.promoDiscount != null ? String(b.promoDiscount) : "");
+    setEditTripType(b.tripType ?? "");
   };
 
   const handleResendConfirmation = async () => {
@@ -431,12 +439,12 @@ export default function Bookings() {
   };
 
   const exportCSV = () => {
-    const headers = ["Code", "Passenger", "Phone", "Email", "Service", "Date", "Time", "Pickup", "Drop-off", "Vehicle", "Driver", "Total", "Status"];
+    const headers = ["Code", "Passenger", "Phone", "Email", "Service", "Trip Type", "Date", "Time", "Pickup", "Drop-off", "Vehicle", "Driver", "Total", "Status"];
     const rows = filtered.map(b => {
       const driver = drivers.find((d: any) => d.id === b.driverId);
       return [
         b.confirmationCode, b.passengerName, b.passengerPhone, b.passengerEmail,
-        b.service, b.date, b.time, b.pickupAddress, b.dropoffAddress ?? "",
+        b.service, b.tripType ?? "", b.date, b.time, b.pickupAddress, b.dropoffAddress ?? "",
         b.vehicleType ?? "", driver?.name ?? "", b.totalAmount?.toFixed(2) ?? "0", b.status,
       ];
     });
@@ -463,6 +471,7 @@ export default function Bookings() {
         passengerPhone: editPassengerPhone,
         passengerEmail: editPassengerEmail,
         service: editService,
+        tripType: editTripType || null,
         date: editDate,
         time: editTime,
         pickupAddress: editPickupAddress,
@@ -571,6 +580,7 @@ export default function Bookings() {
         promoCode: createForm.promoCode || null,
         promoDiscount: parseFloat(String(createForm.promoDiscount)) || 0,
         status: createForm.status,
+        tripType: createForm.tripType || null,
         driverId: createForm.driverId !== "" ? Number(createForm.driverId) : null,
         distanceMiles: routeInfo?.distanceMiles ?? null,
       };
@@ -667,21 +677,21 @@ export default function Bookings() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.04]">
-                  {["Code", "Passenger", "Phone", "Service", "Pickup", "Date / Time", "Vehicle", "Driver", "Total", "Status", "Actions"].map(h => (
+                  {["Code", "Passenger", "Phone", "Service", "Type", "Pickup", "Date / Time", "Vehicle", "Driver", "Total", "Status", "Actions"].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-[10px] font-bold tracking-widest uppercase text-white/20 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="text-center py-10"><Loader2 className="w-5 h-5 animate-spin text-white/20 mx-auto" /></td></tr>
+                  <tr><td colSpan={12} className="text-center py-10"><Loader2 className="w-5 h-5 animate-spin text-white/20 mx-auto" /></td></tr>
                 ) : sorted.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-10 text-white/20 text-xs">No bookings found</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-white/20 text-xs">No bookings found</td></tr>
                 ) : dateGroups.map(group => (
                   <>
                     {/* Date section header */}
                     <tr key={`hdr-${group.key}`} className={group.isToday ? "border-b border-[#C9A84C]/20" : "border-b border-white/[0.04]"}>
-                      <td colSpan={11} className={`px-4 py-2 ${group.isToday ? "bg-[#C9A84C]/8" : group.key === "__archive__" ? "bg-white/[0.015]" : "bg-white/[0.02]"}`}>
+                      <td colSpan={12} className={`px-4 py-2 ${group.isToday ? "bg-[#C9A84C]/8" : group.key === "__archive__" ? "bg-white/[0.015]" : "bg-white/[0.02]"}`}>
                         <div className="flex items-center gap-2">
                           {group.isToday
                             ? <CalendarDays className="w-3 h-3 text-[#C9A84C]" />
@@ -709,11 +719,21 @@ export default function Bookings() {
                           onClick={() => openDetail(b)}>
                           <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C] whitespace-nowrap">{b.confirmationCode}</td>
                           <td className="px-4 py-3 text-xs text-white font-medium whitespace-nowrap">
-                            {b.passengerName}
-                            {isSoon && <span className="ml-1.5 text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1 py-0.5">en {mins}m</span>}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {b.passengerName}
+                              {isNewBooking(b) && <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 bg-emerald-400/15 text-emerald-400 border border-emerald-400/25">NEW</span>}
+                              {isSoon && <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1 py-0.5">en {mins}m</span>}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-white/40 whitespace-nowrap">{b.passengerPhone}</td>
                           <td className="px-4 py-3 text-xs text-white/50 capitalize whitespace-nowrap">{b.service}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {b.tripType ? (
+                              <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 border ${b.tripType === "business" ? "text-sky-400 bg-sky-400/10 border-sky-400/20" : "text-violet-400 bg-violet-400/10 border-violet-400/20"}`}>
+                                {b.tripType === "business" ? "Business" : "Personal"}
+                              </span>
+                            ) : <span className="text-white/15">—</span>}
+                          </td>
                           <td className="px-4 py-3 text-xs text-white/40 max-w-[140px] truncate">{b.pickupAddress}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">
                             <span className={group.isToday ? "text-[#C9A84C]/80 font-bold" : "text-white/50"}>{b.date}</span>
@@ -978,7 +998,15 @@ export default function Bookings() {
                 {/* Assignment */}
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-white/20 font-bold mb-3 border-b border-white/[0.04] pb-2">Assignment & Status</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Field label="Trip Type">
+                      <select className={selectCls} style={{ colorScheme: "dark" }}
+                        value={createForm.tripType} onChange={e => setField("tripType", e.target.value)}>
+                        <option value="">Not specified</option>
+                        <option value="personal">Personal</option>
+                        <option value="business">Business</option>
+                      </select>
+                    </Field>
                     <Field label="Assign Driver">
                       <select className={selectCls} style={{ colorScheme: "dark" }}
                         value={createForm.driverId} onChange={e => setField("driverId", e.target.value)}>
@@ -1212,6 +1240,22 @@ export default function Bookings() {
                 </div>
 
                 <div className="border-t border-white/[0.05] pt-4 space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-2">Trip Type</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {(["", "personal", "business"] as const).map(t => (
+                        <button key={t} onClick={() => setEditTripType(t)} disabled={saving}
+                          className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider border transition-colors disabled:opacity-50 ${editTripType === t
+                            ? t === "business" ? "border-sky-400/40 text-sky-400 bg-sky-400/10"
+                              : t === "personal" ? "border-violet-400/40 text-violet-400 bg-violet-400/10"
+                              : "border-white/20 text-white/40 bg-white/5"
+                            : "border-white/[0.07] text-white/20 hover:border-white/20"}`}>
+                          {t === "" ? "Not set" : t === "personal" ? "Personal" : "Business"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-white/20 mb-2">Status</label>
                     <div className="flex gap-1.5 flex-wrap">

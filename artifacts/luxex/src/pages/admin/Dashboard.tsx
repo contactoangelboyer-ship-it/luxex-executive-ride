@@ -266,6 +266,97 @@ export default function Dashboard() {
           </motion.div>
         )}
 
+        {/* Smart Alerts */}
+        {!loading && dbConfigured && (() => {
+          const unassignedToday: number = data?.alerts?.unassignedToday ?? 0;
+          const stalePending: number = data?.alerts?.stalePending ?? 0;
+
+          // Compute driver conflicts from upcomingAssigned (returned by backend)
+          const upcoming: any[] = data?.alerts?.upcomingAssigned ?? [];
+          const conflictPairs: [any, any][] = [];
+          for (let i = 0; i < upcoming.length; i++) {
+            for (let j = i + 1; j < upcoming.length; j++) {
+              const a = upcoming[i], b = upcoming[j];
+              if (a.driverId !== b.driverId || a.date !== b.date) continue;
+              const toM = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+              if (Math.abs(toM(a.time) - toM(b.time)) < 120) {
+                if (!conflictPairs.some(([x, y]) => (x.id === a.id && y.id === b.id) || (x.id === b.id && y.id === a.id))) {
+                  conflictPairs.push([a, b]);
+                }
+              }
+            }
+          }
+
+          if (unassignedToday === 0 && stalePending === 0 && conflictPairs.length === 0) return null;
+
+          return (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Attention Required</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {unassignedToday > 0 && (
+                  <Link href="/admin/bookings">
+                    <a className="flex items-center gap-3 p-3 border border-red-400/20 bg-red-400/5 hover:bg-red-400/8 transition-colors">
+                      <div className="w-8 h-8 flex items-center justify-center bg-red-400/10 border border-red-400/20 shrink-0">
+                        <Users className="w-4 h-4 text-red-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-black text-base text-red-300">{unassignedToday}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-red-400/60 font-bold">Trip{unassignedToday > 1 ? "s" : ""} today without driver</p>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-red-400/40" />
+                    </a>
+                  </Link>
+                )}
+                {stalePending > 0 && (
+                  <Link href="/admin/bookings?status=pending">
+                    <a className="flex items-center gap-3 p-3 border border-amber-400/20 bg-amber-400/5 hover:bg-amber-400/8 transition-colors">
+                      <div className="w-8 h-8 flex items-center justify-center bg-amber-400/10 border border-amber-400/20 shrink-0">
+                        <Clock className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-black text-base text-amber-300">{stalePending}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-amber-400/60 font-bold">Pending &gt;1h — needs action</p>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-amber-400/40" />
+                    </a>
+                  </Link>
+                )}
+                {conflictPairs.length > 0 && (
+                  <Link href="/admin/bookings">
+                    <a className="flex items-center gap-3 p-3 border border-orange-400/20 bg-orange-400/5 hover:bg-orange-400/8 transition-colors">
+                      <div className="w-8 h-8 flex items-center justify-center bg-orange-400/10 border border-orange-400/20 shrink-0">
+                        <AlertTriangle className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-black text-base text-orange-300">{conflictPairs.length}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-orange-400/60 font-bold">Driver schedule conflict{conflictPairs.length > 1 ? "s" : ""}</p>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-orange-400/40" />
+                    </a>
+                  </Link>
+                )}
+              </div>
+              {conflictPairs.length > 0 && (
+                <div className="p-3 border border-orange-400/10 bg-orange-400/[0.03] space-y-1.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-orange-400/50 mb-2">Conflict Details</p>
+                  {conflictPairs.slice(0, 3).map(([a, b], i) => (
+                    <div key={i} className="flex items-center gap-3 text-[10px] text-orange-400/60">
+                      <span className="font-mono text-orange-400/80">{a.confirmationCode}</span>
+                      <span className="text-orange-400/30">vs</span>
+                      <span className="font-mono text-orange-400/80">{b.confirmationCode}</span>
+                      <span className="text-orange-400/30">—</span>
+                      <span>{a.date} · {a.time} / {b.time}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard label="Today's Bookings" value={stats.todayBookings ?? 0} icon={Calendar} color={YELLOW}

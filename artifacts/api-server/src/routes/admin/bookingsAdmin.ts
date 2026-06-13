@@ -12,7 +12,20 @@ import {
 } from "../../lib/mailer";
 import { logger } from "../../lib/logger";
 
+// Module-level migration — starts when this module is first imported.
+// Awaited by middleware below so ALL routes execute only after the column exists.
+const _tripTypeReady: Promise<void> = (() => {
+  if (!db) return Promise.resolve();
+  return db
+    .execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS trip_type VARCHAR(20)`)
+    .then(() => {})
+    .catch(() => {});
+})();
+
 const router = Router();
+
+// Ensure trip_type column exists before handling any request in this router
+router.use(async (_req, _res, next) => { await _tripTypeReady; next(); });
 
 router.get("/bookings", requireAdmin, async (req, res) => {
   try {

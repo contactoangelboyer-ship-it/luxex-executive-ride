@@ -161,6 +161,7 @@ router.post("/bookings", async (req, res) => {
       passengerName:    body.passengerName,
       passengerPhone:   body.passengerPhone,
       passengerEmail:   body.passengerEmail,
+      tripType:         body.tripType ?? null,
       notes:            body.notes ?? null,
       meetAndGreet:     body.meetAndGreet ?? false,
       childSeat:        body.childSeat ?? false,

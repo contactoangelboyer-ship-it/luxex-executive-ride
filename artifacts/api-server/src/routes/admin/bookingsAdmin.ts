@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookings, adminDrivers } from "@workspace/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, asc, sql } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
 import {
   sendDriverAssignment,
@@ -23,7 +23,17 @@ router.get("/bookings", requireAdmin, async (req, res) => {
     if (date) conditions.push(eq(bookings.date, date));
     if (service) conditions.push(eq(bookings.service, service));
     if (conditions.length > 0) query = query.where(sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}`);
-    const data = await query.orderBy(desc(bookings.createdAt)).limit(Number(limit)).offset(Number(offset));
+    const statusPriority = sql`CASE
+      WHEN ${bookings.status} = 'in_progress' THEN 1
+      WHEN ${bookings.status} = 'assigned'    THEN 2
+      WHEN ${bookings.status} = 'confirmed'   THEN 3
+      WHEN ${bookings.status} = 'pending'     THEN 4
+      WHEN ${bookings.status} = 'completed'   THEN 5
+      WHEN ${bookings.status} = 'cancelled'   THEN 6
+      ELSE 7 END`;
+    const data = await query
+      .orderBy(statusPriority, asc(bookings.date), asc(bookings.time))
+      .limit(Number(limit)).offset(Number(offset));
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Failed to list bookings");

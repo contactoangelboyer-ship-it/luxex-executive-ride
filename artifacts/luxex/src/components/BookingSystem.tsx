@@ -25,6 +25,7 @@ interface GeoPlace {
 
 interface BookingState {
   service: ServiceType | null;
+  tripType: "personal" | "business" | null;
   pickup: GeoPlace | null;
   stops: (GeoPlace | null)[];
   dropoff: GeoPlace | null;
@@ -247,7 +248,7 @@ function PriceLine({ label, value, highlight = false, discount = false }: { labe
 }
 
 const INITIAL_STATE: BookingState = {
-  service: null, pickup: null, stops: [], dropoff: null, date: "", time: "",
+  service: null, tripType: null, pickup: null, stops: [], dropoff: null, date: "", time: "",
   passengers: 1, bags: 1, hours: 2, vehicleId: null,
   flightNumber: "", flightType: "arrival", meetAndGreet: false,
   childSeat: false, name: "", phone: "", email: "", notes: "", promoCode: "",
@@ -403,6 +404,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
           hours: b.service === "hourly" ? b.hours : null, vehicleType: b.vehicleId,
           flightNumber: b.flightNumber || null, flightType: b.flightType,
           passengerName: b.name, passengerPhone: b.phone, passengerEmail: b.email,
+          tripType: b.tripType || null,
           notes: b.notes || null, meetAndGreet: b.meetAndGreet, childSeat: b.childSeat,
           baseAmount: price.base, mileageAmount: price.mileage,
           surchargesAmount: price.airportFee + price.afterHours + price.weekend + price.zoneSurcharge + price.meetGreet + price.childSeat + price.stopsFee,
@@ -786,6 +788,22 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                       {step === 4 && (
                         <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
                           className="space-y-4">
+                          {/* Trip Type */}
+                          <div>
+                            <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">Trip Type</label>
+                            <div className="flex gap-2">
+                              {([
+                                { value: "personal" as const, label: "Personal", icon: <User className="w-4 h-4" /> },
+                                { value: "business" as const, label: "Business", icon: <Briefcase className="w-4 h-4" /> },
+                              ]).map(opt => (
+                                <button key={opt.value} type="button"
+                                  onClick={() => set({ tripType: b.tripType === opt.value ? null : opt.value })}
+                                  className={`flex-1 flex items-center justify-center gap-2 py-3 border text-xs font-bold uppercase tracking-widest transition-colors ${b.tripType === opt.value ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/8" : "border-white/10 text-white/30 hover:border-white/20 hover:text-white/40"}`}>
+                                  {opt.icon} {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           {[
                             { key: "name" as const, label: "Full Name", icon: <User className="w-4 h-4" />, type: "text", placeholder: "John Smith", required: true },
                             { key: "phone" as const, label: "Phone", icon: <Phone className="w-4 h-4" />, type: "tel", placeholder: "+1 (347) 000-0000", required: true },
@@ -818,6 +836,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             <div className="grid grid-cols-2 gap-4 text-xs">
                               {([
                                 ["Service", b.service === "hourly" ? `Hourly / As-Directed · ${b.hours}h` : b.service?.replace("_", " ")],
+                                b.tripType ? ["Trip Type", b.tripType === "business" ? "Business" : "Personal"] : null,
                                 ["Date & Time", `${b.date} · ${b.time}`],
                                 ["Pickup", b.pickup?.short_name],
                                 ...validStops.map((s, i) => [`Stop ${i + 1}`, s.short_name] as [string, string]),

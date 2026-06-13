@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap, Navigation2, Bell, Clock, CalendarDays } from "lucide-react";
+import { Search, X, Loader2, XCircle, Car, CheckCircle, Download, Plus, Mail, Zap, Navigation2, Bell, Clock, CalendarDays, AlertTriangle, UserCheck } from "lucide-react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { adminApi } from "@/lib/adminApi";
 
@@ -109,6 +109,39 @@ function isNewBooking(b: any): boolean {
   return (Date.now() - new Date(b.createdAt).getTime()) < 24 * 60 * 60 * 1000 && b.status === "pending";
 }
 
+function toMins(time: string): number {
+  const [h, m] = (time || "0:0").split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+function getDriverConflicts(
+  driverId: string | number,
+  date: string,
+  time: string,
+  excludeId: number | null,
+  allBookings: any[]
+): any[] {
+  if (!driverId || !date || !time) return [];
+  const thisMins = toMins(time);
+  return allBookings.filter(b => {
+    if (excludeId && b.id === excludeId) return false;
+    if (String(b.driverId) !== String(driverId)) return false;
+    if (b.date !== date) return false;
+    if (!["assigned", "confirmed", "in_progress"].includes(b.status)) return false;
+    return Math.abs(toMins(b.time) - thisMins) < 120;
+  });
+}
+
+function findReturningPassenger(phone: string, allBookings: any[]): { name: string; phone: string; email: string } | null {
+  if (!phone || phone.replace(/\D/g, "").length < 7) return null;
+  const suffix = phone.replace(/\D/g, "").slice(-7);
+  const found = allBookings.find(b =>
+    b.passengerPhone && b.passengerPhone.replace(/\D/g, "").slice(-7) === suffix
+  );
+  if (!found) return null;
+  return { name: found.passengerName ?? "", phone: found.passengerPhone ?? "", email: found.passengerEmail ?? "" };
+}
+
 const EMPTY_FORM = {
   service: "airport",
   pickupAddress: "",
@@ -169,6 +202,9 @@ export default function Bookings() {
   const [adminNotes, setAdminNotes] = useState("");
     const [adminPrice, setAdminPrice] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+
+  // Returning passenger suggestion
+  const [suggestedPassenger, setSuggestedPassenger] = useState<{ name: string; phone: string; email: string } | null>(null);
 
   // New booking modal state
   const [showCreate, setShowCreate] = useState(false);
@@ -821,13 +857,38 @@ export default function Bookings() {
                     </Field>
                     <Field label="Phone *">
                       <input required className={inputCls} placeholder="+1 (555) 000-0000"
-                        value={createForm.passengerPhone} onChange={e => setField("passengerPhone", e.target.value)} />
+                        value={createForm.passengerPhone}
+                        onChange={e => { setField("passengerPhone", e.target.value); setSuggestedPassenger(null); }}
+                        onBlur={e => {
+                          const p = findReturningPassenger(e.target.value, bookings);
+                          if (p && p.name !== createForm.passengerName) setSuggestedPassenger(p);
+                        }} />
                     </Field>
                     <Field label="Email *">
                       <input required type="email" className={inputCls} placeholder="passenger@email.com"
                         value={createForm.passengerEmail} onChange={e => setField("passengerEmail", e.target.value)} />
                     </Field>
                   </div>
+                  {suggestedPassenger && (
+                    <div className="mt-3 flex items-center gap-3 p-3 border border-emerald-400/20 bg-emerald-400/5">
+                      <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400/70 mb-0.5">Returning Passenger</p>
+                        <p className="text-xs text-white/70 truncate">{suggestedPassenger.name}{suggestedPassenger.email ? ` · ${suggestedPassenger.email}` : ""}</p>
+                      </div>
+                      <button type="button"
+                        onClick={() => {
+                          setCreateForm(prev => ({ ...prev, passengerName: suggestedPassenger.name, passengerPhone: suggestedPassenger.phone, passengerEmail: suggestedPassenger.email }));
+                          setSuggestedPassenger(null);
+                        }}
+                        className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border border-emerald-400/30 text-emerald-400 hover:bg-emerald-400/10 transition-colors shrink-0">
+                        Pre-fill
+                      </button>
+                      <button type="button" onClick={() => setSuggestedPassenger(null)} className="text-white/20 hover:text-white/60">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Trip Details */}
@@ -1011,12 +1072,29 @@ export default function Bookings() {
                       <select className={selectCls} style={{ colorScheme: "dark" }}
                         value={createForm.driverId} onChange={e => setField("driverId", e.target.value)}>
                         <option value="">No driver assigned</option>
-                        {drivers.map(d => (
-                          <option key={d.id} value={String(d.id)}>
-                            {d.name}{d.status === "off_duty" ? " (Off Duty)" : d.status === "on_trip" ? " (On Trip)" : ""}
-                          </option>
-                        ))}
+                        {drivers.map(d => {
+                          const conflicts = getDriverConflicts(d.id, createForm.date, createForm.time, null, bookings);
+                          return (
+                            <option key={d.id} value={String(d.id)}>
+                              {d.name}{conflicts.length ? " ⚠ Conflict" : ""}{d.status === "off_duty" ? " (Off Duty)" : d.status === "on_trip" ? " (On Trip)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {(() => {
+                        const c = getDriverConflicts(createForm.driverId, createForm.date, createForm.time, null, bookings);
+                        if (!c.length) return null;
+                        return (
+                          <div className="mt-2 p-2.5 border border-orange-400/20 bg-orange-400/5 space-y-1">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5">
+                              <AlertTriangle className="w-3 h-3" /> Driver already booked (within 2h)
+                            </p>
+                            {c.slice(0, 2).map((x: any) => (
+                              <p key={x.id} className="text-[10px] text-orange-400/60">{x.confirmationCode} · {x.date} {x.time} · {x.passengerName}</p>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </Field>
                     <Field label="Initial Status">
                       <select className={selectCls} style={{ colorScheme: "dark" }}
@@ -1277,12 +1355,29 @@ export default function Bookings() {
                       style={{ colorScheme: "dark" }}
                     >
                       <option value="">No driver assigned</option>
-                      {drivers.map(d => (
-                        <option key={d.id} value={String(d.id)}>
-                          {d.name}{d.status === "off_duty" ? " (Off Duty)" : d.status === "on_trip" ? " (On Trip)" : ""}
-                        </option>
-                      ))}
+                      {drivers.map(d => {
+                        const conflicts = getDriverConflicts(d.id, selected?.date ?? "", selected?.time ?? "", selected?.id ?? null, bookings);
+                        return (
+                          <option key={d.id} value={String(d.id)}>
+                            {d.name}{conflicts.length ? " ⚠ Conflict" : ""}{d.status === "off_duty" ? " (Off Duty)" : d.status === "on_trip" ? " (On Trip)" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {(() => {
+                      const c = getDriverConflicts(driverAssign, selected?.date ?? "", selected?.time ?? "", selected?.id ?? null, bookings);
+                      if (!c.length) return null;
+                      return (
+                        <div className="mt-2 p-2.5 border border-orange-400/20 bg-orange-400/5 space-y-1">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3 h-3" /> Driver already booked (within 2h)
+                          </p>
+                          {c.slice(0, 2).map((x: any) => (
+                            <p key={x.id} className="text-[10px] text-orange-400/60">{x.confirmationCode} · {x.date} {x.time} · {x.passengerName}</p>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     {drivers.length === 0 && (
                       <p className="text-[10px] text-white/30 mt-1">No drivers registered yet. Add drivers first.</p>
                     )}

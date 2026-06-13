@@ -58,7 +58,7 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     const {
       status, driverId, adminNotes, vehicleType, totalAmount: adminPrice,
       passengerName, passengerPhone, passengerEmail,
-      service, date, time,
+      service, tripType, date, time,
       pickupAddress, pickupLat, pickupLon,
       dropoffAddress, dropoffLat, dropoffLon,
       passengers, bags, hours,
@@ -81,6 +81,7 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
     if (passengerPhone !== undefined) updates.passengerPhone = passengerPhone;
     if (passengerEmail !== undefined) updates.passengerEmail = passengerEmail;
     if (service !== undefined) updates.service = service;
+    if (tripType !== undefined) updates.tripType = tripType;
     if (date !== undefined) updates.date = date;
     if (time !== undefined) updates.time = time;
     if (pickupAddress !== undefined) updates.pickupAddress = pickupAddress;

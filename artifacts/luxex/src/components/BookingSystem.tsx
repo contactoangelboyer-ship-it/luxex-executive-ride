@@ -148,34 +148,40 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const debQ = useDebounce(query, 400);
+  const debQ = useDebounce(query, 350);
 
   useEffect(() => {
     if (!focused || debQ.length < 3) { setPredictions([]); return; }
-    if (abortRef.current) abortRef.current.abort();
-    abortRef.current = new AbortController();
+    const goog = (window as any).google;
+    if (!goog?.maps?.places) return;
     setLoading(true);
-    fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(debQ)}&format=json&countrycodes=us&limit=7&addressdetails=1`,
-      { signal: abortRef.current.signal, headers: { Accept: "application/json", "Accept-Language": "en" } }
-    )
-      .then(r => r.json())
-      .then((results: any[]) => {
+    const svc = new goog.maps.places.AutocompleteService();
+    svc.getPlacePredictions(
+      { input: debQ, componentRestrictions: { country: "us" } },
+      (preds: any[], status: string) => {
         setLoading(false);
-        setPredictions(results.filter((r: any) => r.lat && r.lon));
-      })
-      .catch(e => { if (e.name !== "AbortError") { setLoading(false); setPredictions([]); } });
-    return () => { abortRef.current?.abort(); };
+        if (status === goog.maps.places.PlacesServiceStatus.OK && preds) setPredictions(preds);
+        else setPredictions([]);
+      }
+    );
   }, [debQ, focused]);
 
   const selectPrediction = (pred: any) => {
-    const parts = (pred.display_name as string).split(", ");
-    const short_name = parts.slice(0, 2).join(", ");
-    onSelect({ display_name: pred.display_name, short_name, lat: parseFloat(pred.lat), lon: parseFloat(pred.lon) });
-    setQuery(short_name);
-    setPredictions([]);
-    setFocused(false);
+    const goog = (window as any).google;
+    if (!goog?.maps) return;
+    const geocoder = new goog.maps.Geocoder();
+    geocoder.geocode({ placeId: pred.place_id }, (results: any[], status: string) => {
+      if (status === "OK" && results[0]?.geometry?.location) {
+        const lat = results[0].geometry.location.lat();
+        const lon = results[0].geometry.location.lng();
+        const short_name = pred.structured_formatting.main_text +
+          (pred.structured_formatting.secondary_text ? ", " + pred.structured_formatting.secondary_text.split(",")[0] : "");
+        onSelect({ display_name: results[0].formatted_address ?? pred.description, short_name, lat, lon });
+        setQuery(short_name);
+        setPredictions([]);
+        setFocused(false);
+      }
+    });
   };
 
   useEffect(() => { if (value) setQuery(value.short_name); else setQuery(""); }, [value]);

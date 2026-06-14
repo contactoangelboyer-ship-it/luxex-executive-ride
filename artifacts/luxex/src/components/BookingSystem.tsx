@@ -151,14 +151,16 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   const debQ = useDebounce(query, 350);
 
   useEffect(() => {
-    if (!focused || debQ.length < 3) { setPredictions([]); return; }
+    if (!focused || debQ.length < 3) { setPredictions([]); setLoading(false); return; }
     const goog = (window as any).google;
-    if (!goog?.maps?.places) return;
+    if (!goog?.maps?.places) { setLoading(false); return; }
     setLoading(true);
+    const timeout = setTimeout(() => setLoading(false), 5000);
     const svc = new goog.maps.places.AutocompleteService();
     svc.getPlacePredictions(
       { input: debQ, componentRestrictions: { country: "us" } },
       (preds: any[], status: string) => {
+        clearTimeout(timeout);
         setLoading(false);
         if (status === goog.maps.places.PlacesServiceStatus.OK && preds) setPredictions(preds);
         else setPredictions([]);
@@ -212,14 +214,15 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute left-0 right-0 top-full mt-1 z-50 bg-[#111] border border-white/10 overflow-hidden shadow-2xl">
             {predictions.map((p: any) => {
-              const parts = (p.display_name as string).split(", ");
+              const main = p.structured_formatting?.main_text ?? p.description ?? "";
+              const secondary = p.structured_formatting?.secondary_text ?? "";
               return (
                 <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
                   className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
                   <MapPin className="w-3.5 h-3.5 text-[#C9A84C] shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-xs text-white/80 leading-snug block">{parts[0]}</span>
-                    <span className="text-[10px] text-white/30 leading-snug">{parts.slice(1, 3).join(", ")}</span>
+                    <span className="text-xs text-white/80 leading-snug block">{main}</span>
+                    <span className="text-[10px] text-white/30 leading-snug">{secondary}</span>
                   </div>
                 </button>
               );
@@ -943,3 +946,4 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
     </>
   );
 }
+

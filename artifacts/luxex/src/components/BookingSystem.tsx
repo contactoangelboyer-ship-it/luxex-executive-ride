@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -148,48 +148,34 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const debQ = useDebounce(query, 350);
+  const abortRef = useRef<AbortController | null>(null);
+  const debQ = useDebounce(query, 400);
 
   useEffect(() => {
     if (!focused || debQ.length < 3) { setPredictions([]); return; }
-    const goog = (window as any).google;
-    if (!goog?.maps?.places) return;
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
     setLoading(true);
-    const svc = new goog.maps.places.AutocompleteService();
-    svc.getPlacePredictions(
-      { input: debQ, componentRestrictions: { country: "us" } },
-      (preds: any[], status: string) => {
+    fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(debQ)}&format=json&countrycodes=us&limit=7&addressdetails=1`,
+      { signal: abortRef.current.signal, headers: { Accept: "application/json", "Accept-Language": "en" } }
+    )
+      .then(r => r.json())
+      .then((results: any[]) => {
         setLoading(false);
-        if (status === goog.maps.places.PlacesServiceStatus.OK && preds) {
-          setPredictions(preds);
-        } else {
-          setPredictions([]);
-        }
-      }
-    );
+        setPredictions(results.filter((r: any) => r.lat && r.lon));
+      })
+      .catch(e => { if (e.name !== "AbortError") { setLoading(false); setPredictions([]); } });
+    return () => { abortRef.current?.abort(); };
   }, [debQ, focused]);
 
   const selectPrediction = (pred: any) => {
-    const goog = (window as any).google;
-    if (!goog?.maps) return;
-    const geocoder = new goog.maps.Geocoder();
-    geocoder.geocode(
-      { placeId: pred.place_id },
-      (results: any[], status: string) => {
-        if (status === "OK" && results[0]?.geometry?.location) {
-          const lat = results[0].geometry.location.lat();
-          const lon = results[0].geometry.location.lng();
-          const short_name = pred.structured_formatting.main_text +
-            (pred.structured_formatting.secondary_text
-              ? ", " + pred.structured_formatting.secondary_text.split(",")[0]
-              : "");
-          onSelect({ display_name: results[0].formatted_address ?? pred.description, short_name, lat, lon });
-          setQuery(short_name);
-          setPredictions([]);
-          setFocused(false);
-        }
-      }
-    );
+    const parts = (pred.display_name as string).split(", ");
+    const short_name = parts.slice(0, 2).join(", ");
+    onSelect({ display_name: pred.display_name, short_name, lat: parseFloat(pred.lat), lon: parseFloat(pred.lon) });
+    setQuery(short_name);
+    setPredictions([]);
+    setFocused(false);
   };
 
   useEffect(() => { if (value) setQuery(value.short_name); else setQuery(""); }, [value]);
@@ -219,16 +205,19 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
         {focused && predictions.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute left-0 right-0 top-full mt-1 z-50 bg-[#111] border border-white/10 overflow-hidden shadow-2xl">
-            {predictions.map((p: any) => (
-              <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
-                className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
-                <MapPin className="w-3.5 h-3.5 text-[#C9A84C] shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs text-white/80 leading-snug block">{p.structured_formatting.main_text}</span>
-                  <span className="text-[10px] text-white/30 leading-snug">{p.structured_formatting.secondary_text}</span>
-                </div>
-              </button>
-            ))}
+            {predictions.map((p: any) => {
+              const parts = (p.display_name as string).split(", ");
+              return (
+                <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
+                  className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
+                  <MapPin className="w-3.5 h-3.5 text-[#C9A84C] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs text-white/80 leading-snug block">{parts[0]}</span>
+                    <span className="text-[10px] text-white/30 leading-snug">{parts.slice(1, 3).join(", ")}</span>
+                  </div>
+                </button>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>

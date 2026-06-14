@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -148,7 +148,6 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const mapDivRef = useRef<HTMLDivElement>(null);
   const debQ = useDebounce(query, 350);
 
   useEffect(() => {
@@ -172,19 +171,19 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
 
   const selectPrediction = (pred: any) => {
     const goog = (window as any).google;
-    if (!goog?.maps?.places || !mapDivRef.current) return;
-    const placeSvc = new goog.maps.places.PlacesService(mapDivRef.current);
-    placeSvc.getDetails(
-      { placeId: pred.place_id, fields: ["geometry", "formatted_address"] },
-      (place: any, status: string) => {
-        if (status === goog.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-          const lat = place.geometry.location.lat();
-          const lon = place.geometry.location.lng();
+    if (!goog?.maps) return;
+    const geocoder = new goog.maps.Geocoder();
+    geocoder.geocode(
+      { placeId: pred.place_id },
+      (results: any[], status: string) => {
+        if (status === "OK" && results[0]?.geometry?.location) {
+          const lat = results[0].geometry.location.lat();
+          const lon = results[0].geometry.location.lng();
           const short_name = pred.structured_formatting.main_text +
             (pred.structured_formatting.secondary_text
               ? ", " + pred.structured_formatting.secondary_text.split(",")[0]
               : "");
-          onSelect({ display_name: place.formatted_address ?? pred.description, short_name, lat, lon });
+          onSelect({ display_name: results[0].formatted_address ?? pred.description, short_name, lat, lon });
           setQuery(short_name);
           setPredictions([]);
           setFocused(false);
@@ -197,7 +196,6 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
 
   return (
     <div className="relative">
-      <div ref={mapDivRef} className="hidden" />
       <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-white/30 mb-2">{label}</label>
       <div className={`flex items-center gap-3 border px-4 py-3.5 transition-colors duration-200 ${focused ? "border-[#C9A84C]" : "border-white/10"} bg-[#0f0f0f]`}>
         <span className="text-[#C9A84C] shrink-0">{icon}</span>

@@ -140,6 +140,26 @@ function shortenPlace(name: string): string {
   return name.split(",").slice(0, 2).join(", ");
 }
 
+function fetchNominatim(q: string): Promise<any[]> {
+  return fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us&limit=6`,
+    { headers: { "Accept-Language": "en", "User-Agent": "luxexride.com/booking" } }
+  )
+    .then(r => r.json())
+    .then((results: any[]) =>
+      results.map((r: any) => ({
+        _source: "nominatim" as const,
+        place_id: String(r.place_id),
+        main: r.display_name.split(",")[0].trim(),
+        secondary: r.display_name.split(",").slice(1, 3).join(",").trim(),
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        display_name: r.display_name,
+      }))
+    )
+    .catch(() => []);
+}
+
 function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
   label: string; icon: React.ReactNode; value: GeoPlace | null;
   onSelect: (p: GeoPlace) => void; placeholder: string; onClear?: () => void;
@@ -152,23 +172,48 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
 
   useEffect(() => {
     if (!focused || debQ.length < 3) { setPredictions([]); setLoading(false); return; }
-    const goog = (window as any).google;
-    if (!goog?.maps?.places) { setLoading(false); return; }
     setLoading(true);
-    const timeout = setTimeout(() => setLoading(false), 5000);
-    const svc = new goog.maps.places.AutocompleteService();
-    svc.getPlacePredictions(
-      { input: debQ, componentRestrictions: { country: "us" } },
-      (preds: any[], status: string) => {
-        clearTimeout(timeout);
+    const timer = setTimeout(() => { setLoading(false); setPredictions([]); }, 8000);
+
+    const goog = (window as any).google;
+    if (goog?.maps?.places) {
+      const svc = new goog.maps.places.AutocompleteService();
+      svc.getPlacePredictions(
+        { input: debQ, componentRestrictions: { country: "us" } },
+        (preds: any[], status: string) => {
+          if (status === goog.maps.places.PlacesServiceStatus.OK && preds?.length) {
+            clearTimeout(timer);
+            setLoading(false);
+            setPredictions(preds.map((p: any) => ({ ...p, _source: "google" })));
+          } else {
+            // Google Places denied or restricted — fall back to Nominatim
+            fetchNominatim(debQ).then(results => {
+              clearTimeout(timer);
+              setLoading(false);
+              setPredictions(results);
+            });
+          }
+        }
+      );
+    } else {
+      // Google Maps not loaded — use Nominatim directly
+      fetchNominatim(debQ).then(results => {
+        clearTimeout(timer);
         setLoading(false);
-        if (status === goog.maps.places.PlacesServiceStatus.OK && preds) setPredictions(preds);
-        else setPredictions([]);
-      }
-    );
+        setPredictions(results);
+      });
+    }
   }, [debQ, focused]);
 
   const selectPrediction = (pred: any) => {
+    if (pred._source === "nominatim") {
+      const short_name = pred.main + (pred.secondary ? ", " + pred.secondary.split(",")[0].trim() : "");
+      onSelect({ display_name: pred.display_name, short_name, lat: pred.lat, lon: pred.lon });
+      setQuery(short_name);
+      setPredictions([]);
+      setFocused(false);
+      return;
+    }
     const goog = (window as any).google;
     if (!goog?.maps) return;
     const geocoder = new goog.maps.Geocoder();
@@ -214,8 +259,8 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute left-0 right-0 top-full mt-1 z-50 bg-[#111] border border-white/10 overflow-hidden shadow-2xl">
             {predictions.map((p: any) => {
-              const main = p.structured_formatting?.main_text ?? p.description ?? "";
-              const secondary = p.structured_formatting?.secondary_text ?? "";
+              const main = p._source === "nominatim" ? p.main : (p.structured_formatting?.main_text ?? p.description ?? "");
+              const secondary = p._source === "nominatim" ? p.secondary : (p.structured_formatting?.secondary_text ?? "");
               return (
                 <button key={p.place_id} onMouseDown={() => selectPrediction(p)}
                   className="w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/[0.04] last:border-0">
@@ -233,7 +278,6 @@ function AddressInput({ label, icon, value, onSelect, placeholder, onClear }: {
     </div>
   );
 }
-
 function PriceLine({ label, value, highlight = false, discount = false }: { label: string; value: string; highlight?: boolean; discount?: boolean }) {
   return (
     <div className={`flex justify-between items-center py-2 ${highlight ? "border-t border-white/10 mt-1 pt-3" : ""}`}>

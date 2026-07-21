@@ -822,13 +822,13 @@ export default function Landing() {
               <motion.h1 initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="font-black leading-[0.88] tracking-tighter uppercase"
                 style={{ fontSize: "clamp(3.5rem, 9vw, 7.5rem)" }}>
-                Always
+                Luxury Black
               </motion.h1>
             </div>
             <div className="overflow-hidden mb-7">
               <motion.h1 initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ delay: 0.62, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="font-black leading-[0.88] tracking-tighter uppercase" style={{ fontSize: "clamp(3.5rem, 9vw, 7.5rem)", color: YELLOW }}>
-                on time.
+                Car Services.
               </motion.h1>
             </div>
 

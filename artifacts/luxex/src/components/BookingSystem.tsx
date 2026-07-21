@@ -140,6 +140,14 @@ function shortenPlace(name: string): string {
   return name.split(",").slice(0, 2).join(", ");
 }
 
+function isInNJ(place: GeoPlace | null): boolean {
+  if (!place) return false;
+  const n = place.display_name.toLowerCase();
+  return n.includes("new jersey") || /,\s*nj[,\s]/.test(n) || n.includes(", nj,");
+}
+
+const NJ_FLAT_PRICE = 125;
+
 function fetchNominatim(q: string): Promise<any[]> {
   return fetch(
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us&limit=6`,
@@ -367,6 +375,16 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
   }, [b.pickup?.lat, b.dropoff?.lat, validStops.length]);
 
   const dist = routeInfo ? routeInfo.distanceMiles : 0;
+
+  // ── Pricing mode ──────────────────────────────────────────────────────────
+  const isNJTrip = b.service !== "hourly" && isInNJ(b.pickup) && isInNJ(b.dropoff);
+  const tripPricingMode: "nj_flat" | "standard" | "custom_quote" =
+    isNJTrip && dist > 0 && dist <= 20
+      ? "nj_flat"
+      : b.service !== "hourly" && dist > 45
+      ? "custom_quote"
+      : "standard";
+
   const selectedVehicle = vehicles.find(v => v.id === b.vehicleId) ?? null;
   const zonePct = activeZone?.surchargePct ?? 0;
   const zoneFee = activeZone?.flatFee ?? 0;
@@ -431,6 +449,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
   const confirm = async () => {
     if (!selectedVehicle || !price || !b.pickup) return;
     setSubmitting(true);
+    const isQuote = tripPricingMode === "custom_quote";
+    const flatTotal = tripPricingMode === "nj_flat" ? NJ_FLAT_PRICE : null;
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -446,10 +466,15 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
           passengerName: b.name, passengerPhone: b.phone, passengerEmail: b.email,
           tripType: b.tripType || null,
           notes: b.notes || null, meetAndGreet: b.meetAndGreet, childSeat: b.childSeat,
-          baseAmount: price.base, mileageAmount: price.mileage,
-          surchargesAmount: price.airportFee + price.afterHours + price.weekend + price.zoneSurcharge + price.meetGreet + price.childSeat + price.stopsFee,
-          tollsAmount: price.tolls, totalAmount: price.subtotal, distanceMiles: price.distanceMiles,
-          promoCode: b.promoCode || null, promoDiscount: price.promoDiscount,
+          baseAmount: flatTotal ?? price.base,
+          mileageAmount: flatTotal != null ? 0 : price.mileage,
+          surchargesAmount: flatTotal != null ? 0 : price.airportFee + price.afterHours + price.weekend + price.zoneSurcharge + price.meetGreet + price.childSeat + price.stopsFee,
+          tollsAmount: flatTotal != null ? 0 : price.tolls,
+          totalAmount: flatTotal ?? (isQuote ? null : price.subtotal),
+          distanceMiles: price.distanceMiles,
+          promoCode: b.promoCode || null, promoDiscount: flatTotal != null || isQuote ? 0 : price.promoDiscount,
+          isQuoteRequest: isQuote,
+          pricingMode: tripPricingMode,
         }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).error ?? `HTTP ${res.status}`); }
@@ -457,7 +482,11 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
       setConfirmCode(data.confirmationCode ?? data.confirmation_code ?? "");
       setSubmitted(true);
     } catch (err: any) {
-      toast({ title: "Booking failed", description: err?.message ?? "We couldn't process your reservation. Please try again.", variant: "destructive" });
+      toast({
+        title: isQuote ? "Quote request failed" : "Booking failed",
+        description: err?.message ?? "We couldn't process your request. Please try again.",
+        variant: "destructive",
+      });
     } finally { setSubmitting(false); }
   };
 
@@ -777,26 +806,52 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                     </div>
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <p className="font-black text-xl leading-none" style={{ color: active ? YELLOW : "#ffffff" }}>${p.subtotal.toFixed(0)}</p>
-                                    <p className="text-[10px] text-white/25 mt-0.5">+grat ${p.gratuity.toFixed(0)}</p>
-                                    <p className="text-[10px] text-white/20">{p.durationMin}min est.</p>
+                                    {tripPricingMode === "nj_flat" ? (
+                                      <>
+                                        <p className="font-black text-xl leading-none" style={{ color: active ? YELLOW : "#ffffff" }}>${NJ_FLAT_PRICE}</p>
+                                        <p className="text-[10px] text-white/25 mt-0.5">NJ flat rate</p>
+                                        <p className="text-[10px] text-white/20">{p.durationMin}min est.</p>
+                                      </>
+                                    ) : tripPricingMode === "custom_quote" ? (
+                                      <>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: active ? YELLOW : "rgba(255,255,255,0.4)" }}>Quote</p>
+                                        <p className="text-[10px] text-white/20">{p.durationMin}min est.</p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="font-black text-xl leading-none" style={{ color: active ? YELLOW : "#ffffff" }}>${p.subtotal.toFixed(0)}</p>
+                                        <p className="text-[10px] text-white/25 mt-0.5">+grat ${p.gratuity.toFixed(0)}</p>
+                                        <p className="text-[10px] text-white/20">{p.durationMin}min est.</p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                                 {active && (
                                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                                     className="px-4 pb-3 pt-0 border-t border-[#C9A84C]/10 bg-[#C9A84C]/5">
-                                    <PriceLine label={p.baseLabel} value={`$${p.base.toFixed(2)}`} />
-                                    {p.mileage > 0 && <PriceLine label={`${p.distanceMiles.toFixed(1)} mi × $${v.perMile}/mi`} value={`$${p.mileage.toFixed(2)}`} />}
-                                    {p.stopsFee > 0 && <PriceLine label={`${validStops.length} stop${validStops.length > 1 ? "s" : ""} × $15`} value={`$${p.stopsFee.toFixed(2)}`} />}
-                                    {p.airportFee > 0 && <PriceLine label="Airport fee" value={`$${p.airportFee.toFixed(2)}`} />}
-                                    {p.afterHours > 0 && <PriceLine label="After-hours surcharge" value={`$${p.afterHours.toFixed(2)}`} />}
-                                    {p.weekend > 0 && <PriceLine label="Weekend surcharge" value={`$${p.weekend.toFixed(2)}`} />}
-                                    {p.zoneSurcharge > 0 && <PriceLine label={`Zone surcharge (${p.zoneName})`} value={`$${p.zoneSurcharge.toFixed(2)}`} />}
-                                    {p.meetGreet > 0 && <PriceLine label="Meet & Greet" value={`$${p.meetGreet.toFixed(2)}`} />}
-                                    {p.childSeat > 0 && <PriceLine label="Child Seat" value={`$${p.childSeat.toFixed(2)}`} />}
-                                    {p.tolls > 0 && <PriceLine label="Est. tolls" value={`$${p.tolls.toFixed(2)}`} />}
-                                    {p.promoDiscount > 0 && <PriceLine label="Promo discount" value={`-$${p.promoDiscount.toFixed(2)}`} discount />}
-                                    <PriceLine label="Total (excl. gratuity)" value={`$${p.subtotal.toFixed(2)}`} highlight />
+                                    {tripPricingMode === "nj_flat" ? (
+                                      <PriceLine label="NJ Flat Rate (≤ 20 mi)" value={`${NJ_FLAT_PRICE}.00`} highlight />
+                                    ) : tripPricingMode === "custom_quote" ? (
+                                      <div className="py-3 text-center space-y-1.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#C9A84C]">Custom Quote Required</p>
+                                        <p className="text-[10px] text-white/35 leading-relaxed">This trip exceeds our online pricing range. Please submit your request and our team will provide a personalized quote shortly.</p>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <PriceLine label={p.baseLabel} value={`${p.base.toFixed(2)}`} />
+                                        {p.mileage > 0 && <PriceLine label={`${p.distanceMiles.toFixed(1)} mi × ${v.perMile}/mi`} value={`${p.mileage.toFixed(2)}`} />}
+                                        {p.stopsFee > 0 && <PriceLine label={`${validStops.length} stop${validStops.length > 1 ? "s" : ""} × $15`} value={`${p.stopsFee.toFixed(2)}`} />}
+                                        {p.airportFee > 0 && <PriceLine label="Airport fee" value={`${p.airportFee.toFixed(2)}`} />}
+                                        {p.afterHours > 0 && <PriceLine label="After-hours surcharge" value={`${p.afterHours.toFixed(2)}`} />}
+                                        {p.weekend > 0 && <PriceLine label="Weekend surcharge" value={`${p.weekend.toFixed(2)}`} />}
+                                        {p.zoneSurcharge > 0 && <PriceLine label={`Zone surcharge (${p.zoneName})`} value={`${p.zoneSurcharge.toFixed(2)}`} />}
+                                        {p.meetGreet > 0 && <PriceLine label="Meet & Greet" value={`${p.meetGreet.toFixed(2)}`} />}
+                                        {p.childSeat > 0 && <PriceLine label="Child Seat" value={`${p.childSeat.toFixed(2)}`} />}
+                                        {p.tolls > 0 && <PriceLine label="Est. tolls" value={`${p.tolls.toFixed(2)}`} />}
+                                        {p.promoDiscount > 0 && <PriceLine label="Promo discount" value={`-${p.promoDiscount.toFixed(2)}`} discount />}
+                                        <PriceLine label="Total (excl. gratuity)" value={`${p.subtotal.toFixed(2)}`} highlight />
+                                      </>
+                                    )}
                                   </motion.div>
                                 )}
                               </motion.button>
@@ -894,21 +949,32 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             </div>
                             {price && (
                               <div className="border-t border-white/[0.06] pt-4">
-                                {price.airportFee > 0 && <PriceLine label="Airport fee" value={`$${price.airportFee.toFixed(2)}`} />}
-                                {price.afterHours > 0 && <PriceLine label="After-hours surcharge" value={`$${price.afterHours.toFixed(2)}`} />}
-                                {price.weekend > 0 && <PriceLine label="Weekend surcharge" value={`$${price.weekend.toFixed(2)}`} />}
-                                {price.zoneSurcharge > 0 && <PriceLine label={`Zone surcharge (${price.zoneName})`} value={`$${price.zoneSurcharge.toFixed(2)}`} />}
-                                {price.meetGreet > 0 && <PriceLine label="Meet & Greet" value={`$${price.meetGreet.toFixed(2)}`} />}
-                                {price.childSeat > 0 && <PriceLine label="Child Seat" value={`$${price.childSeat.toFixed(2)}`} />}
-                                {price.tolls > 0 && <PriceLine label="Est. tolls" value={`$${price.tolls.toFixed(2)}`} />}
-                                {price.promoDiscount > 0 && (
-                                  <PriceLine
-                                    label={promoDiscountPct > 0 ? `Promo (${promoDiscountPct}% off)` : `Promo ($${promoFixedDiscount} off)`}
-                                    value={`-$${price.promoDiscount.toFixed(2)}`}
-                                    discount
-                                  />
+                                {tripPricingMode === "nj_flat" ? (
+                                  <PriceLine label="NJ Flat Rate (≤ 20 mi)" value={`${NJ_FLAT_PRICE}.00`} highlight />
+                                ) : tripPricingMode === "custom_quote" ? (
+                                  <div className="py-3 space-y-1.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#C9A84C]">Custom Quote Required</p>
+                                    <p className="text-xs text-white/40 leading-relaxed">This trip exceeds our online pricing range. Please submit your request, and our team will provide a personalized quote shortly.</p>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {price.airportFee > 0 && <PriceLine label="Airport fee" value={`${price.airportFee.toFixed(2)}`} />}
+                                    {price.afterHours > 0 && <PriceLine label="After-hours surcharge" value={`${price.afterHours.toFixed(2)}`} />}
+                                    {price.weekend > 0 && <PriceLine label="Weekend surcharge" value={`${price.weekend.toFixed(2)}`} />}
+                                    {price.zoneSurcharge > 0 && <PriceLine label={`Zone surcharge (${price.zoneName})`} value={`${price.zoneSurcharge.toFixed(2)}`} />}
+                                    {price.meetGreet > 0 && <PriceLine label="Meet & Greet" value={`${price.meetGreet.toFixed(2)}`} />}
+                                    {price.childSeat > 0 && <PriceLine label="Child Seat" value={`${price.childSeat.toFixed(2)}`} />}
+                                    {price.tolls > 0 && <PriceLine label="Est. tolls" value={`${price.tolls.toFixed(2)}`} />}
+                                    {price.promoDiscount > 0 && (
+                                      <PriceLine
+                                        label={promoDiscountPct > 0 ? `Promo (${promoDiscountPct}% off)` : `Promo (${promoFixedDiscount} off)`}
+                                        value={`-${price.promoDiscount.toFixed(2)}`}
+                                        discount
+                                      />
+                                    )}
+                                    <PriceLine label="Subtotal" value={`${price.subtotal.toFixed(2)}`} highlight />
+                                  </>
                                 )}
-                                <PriceLine label="Subtotal" value={`$${price.subtotal.toFixed(2)}`} highlight />
                               </div>
                             )}
 
@@ -934,7 +1000,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                         </motion.div>
                       )}
 
-                      {/* Confirmed */}
+                      {/* Confirmed / Quote Submitted */}
                       {submitted && (
                         <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
                           className="flex flex-col items-center text-center py-8 gap-5">
@@ -943,11 +1009,23 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             <Check className="w-7 h-7 text-black" strokeWidth={3} />
                           </motion.div>
                           <div>
-                            <h3 className="font-black text-xl uppercase tracking-tight text-white mb-2">You're on the list.</h3>
-                            {confirmCode && <p className="font-mono text-[#C9A84C] text-lg font-black mb-3 tracking-[0.2em]">{confirmCode}</p>}
-                            <p className="text-white/40 text-sm font-light max-w-[280px] leading-relaxed">
-                              Our concierge will reach out to {b.email || "you"} within minutes to confirm.
-                            </p>
+                            {tripPricingMode === "custom_quote" ? (
+                              <>
+                                <h3 className="font-black text-xl uppercase tracking-tight text-white mb-2">Quote Request Received.</h3>
+                                {confirmCode && <p className="font-mono text-[#C9A84C] text-lg font-black mb-3 tracking-[0.2em]">{confirmCode}</p>}
+                                <p className="text-white/40 text-sm font-light max-w-[300px] leading-relaxed">
+                                  Our team will review your trip details and send a personalized quote to {b.email || "you"} shortly.
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <h3 className="font-black text-xl uppercase tracking-tight text-white mb-2">You're on the list.</h3>
+                                {confirmCode && <p className="font-mono text-[#C9A84C] text-lg font-black mb-3 tracking-[0.2em]">{confirmCode}</p>}
+                                <p className="text-white/40 text-sm font-light max-w-[280px] leading-relaxed">
+                                  Our concierge will reach out to {b.email || "you"} within minutes to confirm.
+                                </p>
+                              </>
+                            )}
                           </div>
                           <a href="tel:+18483888817" className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-white/30 hover:text-white transition-colors">
                             <Phone className="w-3.5 h-3.5 text-[#C9A84C]" /> +1 (848) 388-8817
@@ -976,7 +1054,11 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                       <button onClick={confirm} disabled={submitting}
                         className="w-full py-4 text-[11px] font-black tracking-[0.2em] uppercase flex items-center justify-center gap-2 hover:opacity-90"
                         style={{ background: YELLOW, color: "#000" }}>
-                        {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Sending…</> : "Confirm Reservation"}
+                        {submitting
+                          ? <><Loader2 className="w-4 h-4 animate-spin" />Sending…</>
+                          : tripPricingMode === "custom_quote"
+                          ? "Request a Quote"
+                          : "Confirm Reservation"}
                       </button>
                     </div>
                   )}

@@ -87,7 +87,7 @@ function baseTemplate(body: string): string {
   ${body}
   <div class="footer">
     <p>LuxEx Executive Ride &nbsp;·&nbsp; <a href="https://www.luxexride.com">www.luxexride.com</a></p>
-    <p><a href="mailto:contact@luxexride.com">contact@luxexride.com</a> &nbsp;·&nbsp; <a href="mailto:info@luxexride.com">info@luxexride.com</a></p>
+    <p><a href="tel:8483888817">(848) 388-8817</a> &nbsp;·&nbsp; <a href="mailto:contact@luxexride.com">contact@luxexride.com</a> &nbsp;·&nbsp; <a href="mailto:info@luxexride.com">info@luxexride.com</a></p>
     <p style="margin-top:8px;">© ${new Date().getFullYear()} LuxEx. All rights reserved.</p>
   </div>
 </div>
@@ -272,7 +272,7 @@ function bookingTableDriver(b: any): string {
     // ── Footer ───────────────────────────────────────────────────────────────────
     page.drawRectangle({ x: 0, y: 0, width, height: 56, color: DARK });
     page.drawRectangle({ x: 0, y: 56, width, height: 2, color: GOLD });
-    const f1 = "LuxEx Executive Ride  ·  contact@luxexride.com  ·  www.luxexride.com";
+    const f1 = "LuxEx Executive Ride  ·  (848) 388-8817  ·  contact@luxexride.com  ·  www.luxexride.com";
     const f2 = "This document serves as your official booking confirmation. Thank you for choosing LuxEx.";
     page.drawText(f1, { x: (width - fontReg.widthOfTextAtSize(f1, 8.5)) / 2, y: 36, size: 8.5, font: fontReg, color: GRAY });
     page.drawText(f2, { x: (width - fontReg.widthOfTextAtSize(f2, 8))   / 2, y: 18, size: 8,   font: fontReg, color: rgb(0.45, 0.45, 0.45) });

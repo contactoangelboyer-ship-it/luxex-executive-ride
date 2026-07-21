@@ -1,0 +1,71 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Build frontend
+        run: pnpm --filter @workspace/luxex run build
+        env:
+          NODE_ENV: production
+      - name: Package for Vercel prebuilt deploy
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r artifacts/luxex/dist/public/. .vercel/output/static/
+          cat > .vercel/output/config.json << 'VCFG'
+          {
+            "version": 3,
+            "routes": [
+              {
+                "src": "^/api/(.*)$",
+                "dest": "https://luxex-executive-ride-api-server.vercel.app/api/$1"
+              },
+              {
+                "handle": "filesystem"
+              },
+              {
+                "src": "^/(?!api/).*$",
+                "dest": "/index.html"
+              }
+            ]
+          }
+          VCFG
+      - name: Deploy frontend to Vercel (prebuilt)
+        run: npx vercel deploy --prod --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
+          VERCEL_PROJECT_ID: prj_R5zpW05LrUfbCRGwm5opdtAqCLgw
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Deploy API server to Vercel
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: team_Tcm5sl5VuhWis8llbBGbjbzm
+          VERCEL_PROJECT_ID: prj_kFOCTZ0vseLUbWraPnV6bw7PmlpG

@@ -98043,7 +98043,7 @@ function bookingTable(b) {
     ${b.meetAndGreet ? detailRow("Add-ons", "Meet & Greet") : ""}
     ${b.childSeat ? detailRow("Child Seat", "Yes") : ""}
     ${b.notes ? detailRow("Notes", b.notes) : ""}
-    ${detailRow("Total (excl. gratuity)", `<strong>$${Number(b.totalAmount ?? 0).toFixed(2)}</strong>`)}
+    ${Number(b.totalAmount ?? 0) > 0 ? detailRow("Total (excl. gratuity)", `<strong>${Number(b.totalAmount).toFixed(2)}</strong>`) : detailRow("Total (excl. gratuity)", `<span style="color:#999;font-style:italic;">Estimate pending</span>`)}
   </table>`;
 }
 function bookingTableDriver(b) {
@@ -98159,9 +98159,11 @@ async function generateBookingPDF(booking) {
   curY -= rows.length * rowH + 28;
   page.drawRectangle({ x: 36, y: curY - 54, width: width - 72, height: 64, color: DARK });
   page.drawText("TOTAL AMOUNT", { x: 52, y: curY - 22, size: 9, font: fontReg, color: GRAY });
-  const totalStr = `${Number(booking.totalAmount ?? 0).toFixed(2)}`;
-  const totalW = fontBold.widthOfTextAtSize(totalStr, 28);
-  page.drawText(totalStr, { x: width - 52 - totalW, y: curY - 48, size: 28, font: fontBold, color: GOLD });
+  const hasPrice = Number(booking.totalAmount ?? 0) > 0;
+  const totalStr = hasPrice ? `${Number(booking.totalAmount).toFixed(2)}` : "ESTIMATE PENDING";
+  const totalSize = hasPrice ? 28 : 14;
+  const totalW = fontBold.widthOfTextAtSize(totalStr, totalSize);
+  page.drawText(totalStr, { x: width - 52 - totalW, y: curY - 44, size: totalSize, font: fontBold, color: GOLD });
   page.drawRectangle({ x: 0, y: 0, width, height: 56, color: DARK });
   page.drawRectangle({ x: 0, y: 56, width, height: 2, color: GOLD });
   const f1 = "LuxEx Executive Ride  \xB7  contact@luxexride.com  \xB7  www.luxexride.com";
@@ -98178,8 +98180,8 @@ async function sendCustomerConfirmation(booking) {
   if (!booking.passengerEmail) return;
   const html = baseTemplate(`
     <div class="body">
-      <h1>Your ride is confirmed.</h1>
-      <p class="sub">Thank you for booking with LuxEx, <strong>${booking.passengerName}</strong>. We look forward to serving you.</p>
+      <h1>We've received your reservation.</h1>
+      <p class="sub">Thank you for choosing LuxEx, <strong>${booking.passengerName}</strong>. We've received your request and our team will review it shortly. You will receive your trip estimate and full confirmation soon.</p>
 
       <div class="code-box">
         <div class="code-label">Confirmation Code</div>
@@ -98195,12 +98197,17 @@ async function sendCustomerConfirmation(booking) {
       </table>
 
       <div class="alert alert-info">
+        <strong>What happens next?</strong><br>
+        Our team will review your booking and send a trip estimate. Once confirmed, you will receive a separate email with your final price and assigned chauffeur details.
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
         <strong>Need to make changes?</strong><br>
         Reply to this email or contact us at <a href="mailto:contact@luxexride.com" style="color:#5a4400;">contact@luxexride.com</a>.
         Cancellations must be made at least 24 hours in advance.
       </div>
 
-      <p class="note">Your chauffeur will contact you before the trip. Please ensure your phone is reachable at the number provided.</p>
+      <p class="note">Please ensure your phone is reachable at the number provided so our team can reach you.</p>
     </div>
   `);
   let pdfAttachments = [];

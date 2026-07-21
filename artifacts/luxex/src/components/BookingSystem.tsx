@@ -363,7 +363,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
   }, [open]);
 
   const validStops = b.stops.filter(Boolean) as GeoPlace[];
-  const allRoutePoints = [b.pickup, ...validStops, b.service !== "hourly" ? b.dropoff : null].filter(Boolean) as GeoPlace[];
+  const allRoutePoints = [b.pickup, ...validStops, b.dropoff].filter(Boolean) as GeoPlace[];
 
   useEffect(() => {
     if (allRoutePoints.length < 2) { setRouteInfo(null); return; }
@@ -664,10 +664,8 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                             </button>
                           )}
 
-                          {b.service !== "hourly" && (
-                            <AddressInput label="Drop-off Address" icon={<Navigation className="w-4 h-4" />}
-                              value={b.dropoff} onSelect={p => set({ dropoff: p })} placeholder="Enter drop-off location" onClear={() => set({ dropoff: null })} />
-                          )}
+                          <AddressInput label="Drop-off Address" icon={<Navigation className="w-4 h-4" />}
+                            value={b.dropoff} onSelect={p => set({ dropoff: p })} placeholder="Enter drop-off location (optional for hourly)" onClear={() => set({ dropoff: null })} />
 
                           {/* Route info banner */}
                           {routeInfo && (

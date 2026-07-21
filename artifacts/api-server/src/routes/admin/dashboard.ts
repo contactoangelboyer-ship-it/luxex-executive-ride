@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { bookings, adminDrivers as drivers, vehicles } from "@workspace/db/schema";
+import { bookings, adminDrivers as drivers, vehicles, siteVisits } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/adminAuth";
 import { logger } from "../../lib/logger";
+import { getOnlineCount } from "../../lib/onlineUsers";
 
 const router = Router();
 
@@ -22,6 +23,12 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
         totalRevenue: 0,
         todayRevenue: 0,
       },
+      analytics: {
+        totalVisitors: 0,
+        todayVisitors: 0,
+        onlineUsers: getOnlineCount(),
+      },
+      bookingsByStatus: {},
       recentBookings: [],
     });
     return;
@@ -30,6 +37,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
 
+    // ── Core booking counts ──────────────────────────────────────────────────
     const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(bookings);
     const [todayResult] = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(eq(bookings.date, today));
     const [pendingResult] = await db.select({ count: sql<number>`count(*)` }).from(bookings).where(eq(bookings.status, "pending"));
@@ -45,7 +53,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
 
     const recentBookings = await db.select().from(bookings).orderBy(desc(bookings.createdAt)).limit(10);
 
-    // Smart alerts
+    // ── Smart alerts ─────────────────────────────────────────────────────────
     const [unassignedTodayResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(bookings)
@@ -57,7 +65,6 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
       .from(bookings)
       .where(sql`status = 'pending' AND created_at < ${oneHourAgo}`);
 
-    // Upcoming trips (today + next 7 days) that have a driver assigned → used for conflict detection on frontend
     const upcomingAssigned = await db
       .select({
         id: bookings.id,
@@ -72,6 +79,36 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
       .where(sql`date >= ${today} AND driver_id IS NOT NULL AND status IN ('assigned','confirmed','in_progress')`)
       .orderBy(bookings.date, bookings.time);
 
+    // ── Bookings by status ────────────────────────────────────────────────────
+    const statusRows = await db
+      .select({ status: bookings.status, count: sql<number>`count(*)::int` })
+      .from(bookings)
+      .groupBy(bookings.status);
+
+    const bookingsByStatus: Record<string, number> = {};
+    for (const row of statusRows) {
+      bookingsByStatus[row.status] = Number(row.count);
+    }
+
+    // ── Site analytics ────────────────────────────────────────────────────────
+    let totalVisitors = 0;
+    let todayVisitors = 0;
+    try {
+      const [totalVisitorsResult] = await db
+        .select({ count: sql<number>`count(distinct session_id)::int` })
+        .from(siteVisits);
+      totalVisitors = Number(totalVisitorsResult?.count ?? 0);
+
+      const [todayVisitorsResult] = await db
+        .select({ count: sql<number>`count(distinct session_id)::int` })
+        .from(siteVisits)
+        .where(sql`created_at::date = ${today}::date`);
+      todayVisitors = Number(todayVisitorsResult?.count ?? 0);
+    } catch (err) {
+      // Table may not exist yet — silently skip
+      logger.warn({ err }, "site_visits table not available");
+    }
+
     res.json({
       dbConfigured: true,
       stats: {
@@ -85,6 +122,12 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
         totalRevenue: Number(revenueResult[0]?.total ?? 0),
         todayRevenue: Number(todayRevenueResult[0]?.total ?? 0),
       },
+      analytics: {
+        totalVisitors,
+        todayVisitors,
+        onlineUsers: getOnlineCount(),
+      },
+      bookingsByStatus,
       alerts: {
         unassignedToday: Number(unassignedTodayResult?.count ?? 0),
         stalePending: Number(stalePendingResult?.count ?? 0),

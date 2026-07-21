@@ -1,4 +1,41 @@
 import { Switch, Route, Redirect, Router as WouterRouter, useLocation } from "wouter";
+
+// ── Analytics tracking ────────────────────────────────────────────────────────
+function getOrCreateSessionId(): string {
+  let sid = localStorage.getItem("_luxex_sid");
+  if (!sid) {
+    sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("_luxex_sid", sid);
+  }
+  return sid;
+}
+
+function getApiBase(): string {
+  const base = (import.meta as any).env?.BASE_URL ?? "/";
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+}
+
+function useAnalytics() {
+  const [location] = useLocation();
+  useEffect(() => {
+    const sid = getOrCreateSessionId();
+    const apiBase = getApiBase();
+    fetch(`${apiBase}/api/analytics/visit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: sid, page: location }),
+    }).catch(() => {});
+    const interval = setInterval(() => {
+      fetch(`${apiBase}/api/analytics/ping`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sid }),
+      }).catch(() => {});
+    }, 120_000);
+    return () => clearInterval(interval);
+  }, [location]);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,6 +97,7 @@ function DriverGuard({ component: Component }: { component: React.ComponentType 
 
 function Router() {
   const [location] = useLocation();
+  useAnalytics();
   return (
     <AnimatePresence mode="wait">
       <motion.div key={location}

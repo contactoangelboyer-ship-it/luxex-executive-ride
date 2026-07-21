@@ -7,3 +7,4 @@ export * from "./zones";
 export * from "./promotions";
 export * from "./adminUsers";
 export * from "./adminDrivers";
+export * from "./siteAnalytics";

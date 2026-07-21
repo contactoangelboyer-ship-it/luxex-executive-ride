@@ -5,6 +5,7 @@ import {
   Calendar, Users, Clock, DollarSign, ChevronRight, AlertTriangle,
   TrendingUp, TrendingDown, Car, MapPin, Activity, RefreshCw,
   ArrowRight, Receipt, CalendarCheck, CheckCircle2, XCircle, Mail, Wifi,
+  Eye, Globe, Signal,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -222,6 +223,22 @@ export default function Dashboard() {
 
   const displayBookings = !loading && !dbConfigured ? DEMO_BOOKINGS : allBookings;
 
+  // Analytics
+  const analytics = data?.analytics ?? {};
+  const bookingsByStatus: Record<string, number> = data?.bookingsByStatus ?? {};
+  const demoAnalytics = { totalVisitors: 1247, todayVisitors: 38, onlineUsers: 3 };
+  const demoByStatus = {
+    completed: DEMO_BOOKINGS.filter((b: any) => b.status === "completed").length,
+    cancelled: DEMO_BOOKINGS.filter((b: any) => b.status === "cancelled").length,
+    in_progress: DEMO_BOOKINGS.filter((b: any) => b.status === "in_progress").length,
+    assigned: DEMO_BOOKINGS.filter((b: any) => b.status === "assigned").length,
+    confirmed: DEMO_BOOKINGS.filter((b: any) => b.status === "confirmed").length,
+    pending: DEMO_BOOKINGS.filter((b: any) => b.status === "pending").length,
+  };
+  const displayAnalytics = !loading && !dbConfigured ? demoAnalytics : analytics;
+  const displayByStatus: Record<string, number> = !loading && !dbConfigured ? demoByStatus : bookingsByStatus;
+  const totalStatusCount = Object.values(displayByStatus).reduce((s, v) => s + v, 0) || 1;
+
   const revenueTrend = buildRevenueTrend(displayBookings);
   const statusPie = buildStatusPie(displayBookings);
   const serviceBreakdown = buildServiceBreakdown(displayBookings);
@@ -413,6 +430,56 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
+        {/* Site Analytics */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe className="w-3.5 h-3.5 text-white/30" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Site Analytics</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+              className="bg-[#0f0f0f] border border-white/[0.06] px-4 py-3 flex items-center gap-3 hover:border-white/[0.12] transition-colors">
+              <div className="w-8 h-8 flex items-center justify-center bg-blue-400/10 border border-blue-400/20 shrink-0">
+                <Eye className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="font-black text-xl text-white">
+                  {loading ? <span className="inline-block w-12 h-6 bg-white/5 animate-pulse" /> : (displayAnalytics.totalVisitors ?? 0).toLocaleString()}
+                </p>
+                <p className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Total Visitors</p>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+              className="bg-[#0f0f0f] border border-white/[0.06] px-4 py-3 flex items-center gap-3 hover:border-white/[0.12] transition-colors">
+              <div className="w-8 h-8 flex items-center justify-center bg-[#C9A84C]/10 border border-[#C9A84C]/20 shrink-0">
+                <Signal className="w-4 h-4 text-[#C9A84C]" />
+              </div>
+              <div>
+                <p className="font-black text-xl text-white">
+                  {loading ? <span className="inline-block w-12 h-6 bg-white/5 animate-pulse" /> : (displayAnalytics.todayVisitors ?? 0).toLocaleString()}
+                </p>
+                <p className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Today's Visitors</p>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
+              className="bg-[#0f0f0f] border border-white/[0.06] px-4 py-3 flex items-center gap-3 hover:border-white/[0.12] transition-colors relative overflow-hidden">
+              <div className="w-8 h-8 flex items-center justify-center bg-green-400/10 border border-green-400/20 shrink-0 relative">
+                <Wifi className="w-4 h-4 text-green-400" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              </div>
+              <div>
+                <p className="font-black text-xl text-white flex items-baseline gap-2">
+                  {loading ? <span className="inline-block w-8 h-6 bg-white/5 animate-pulse" /> : (displayAnalytics.onlineUsers ?? 0)}
+                  {!loading && (displayAnalytics.onlineUsers ?? 0) > 0 && (
+                    <span className="text-[9px] text-green-400/60 font-bold uppercase tracking-wider">live</span>
+                  )}
+                </p>
+                <p className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Online Now</p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
@@ -586,6 +653,44 @@ export default function Dashboard() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Trip Status Breakdown */}
+        <div className="bg-[#0f0f0f] border border-white/[0.06] p-5">
+          <SectionHeader title="Trip Status Breakdown" action={
+            <span className="text-[9px] text-white/20 uppercase tracking-widest font-bold">{Object.values(displayByStatus).reduce((s, v) => s + v, 0)} total</span>
+          } />
+          <div className="space-y-3">
+            {([
+              { key: "completed",   label: "Completed",   bar: "#4ade80", text: "text-green-300",    bg: "bg-green-400/10",   border: "border-green-400/20" },
+              { key: "in_progress", label: "In Progress", bar: "#ffffff", text: "text-white",        bg: "bg-white/10",       border: "border-white/20" },
+              { key: "assigned",    label: "Assigned",    bar: "#c084fc", text: "text-purple-300",   bg: "bg-purple-400/10",  border: "border-purple-400/20" },
+              { key: "confirmed",   label: "Confirmed",   bar: "#93c5fd", text: "text-blue-300",     bg: "bg-blue-400/10",    border: "border-blue-400/20" },
+              { key: "pending",     label: "Pending",     bar: YELLOW,    text: "text-[#C9A84C]",    bg: "bg-[#C9A84C]/10",   border: "border-[#C9A84C]/20" },
+              { key: "cancelled",   label: "Cancelled",   bar: "rgba(255,255,255,0.12)", text: "text-white/30", bg: "bg-white/[0.03]", border: "border-white/[0.06]" },
+            ] as const).map(({ key, label, bar, text, bg, border }) => {
+              const count = displayByStatus[key] ?? 0;
+              const pct = Math.round((count / totalStatusCount) * 100);
+              return (
+                <div key={key} className="flex items-center gap-3 group">
+                  <div className={`flex items-center justify-center px-2 py-0.5 border text-[9px] font-black uppercase tracking-wider w-[90px] shrink-0 ${text} ${bg} ${border}`}>
+                    {label}
+                  </div>
+                  <div className="flex-1 h-1.5 bg-white/[0.04] overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: loading ? "0%" : `${pct}%` }}
+                      transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
+                      className="h-full"
+                      style={{ background: bar }}
+                    />
+                  </div>
+                  <span className="font-black text-sm text-white w-8 text-right shrink-0">{loading ? "—" : count}</span>
+                  <span className="text-[9px] text-white/20 w-9 text-right shrink-0">{loading ? "" : `${pct}%`}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

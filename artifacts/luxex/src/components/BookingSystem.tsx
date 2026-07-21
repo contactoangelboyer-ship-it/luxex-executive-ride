@@ -381,7 +381,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
   const tripPricingMode: "nj_flat" | "standard" | "custom_quote" =
     isNJTrip && dist > 0 && dist <= 20
       ? "nj_flat"
-      : b.service !== "hourly" && dist > 45
+      : b.service !== "hourly" && dist > 40
       ? "custom_quote"
       : "standard";
 

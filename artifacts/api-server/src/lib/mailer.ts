@@ -13,14 +13,20 @@ const FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";
 const FROM_INFO     = "LuxEx Executive Ride <info@luxexride.com>";
 const REPLY_TO      = "contact@luxexride.com";
 
-const CORPORATE_ADMIN_EMAILS = ["contact@luxexride.com", "info@luxexride.com", "bookings@luxexride.com"];
-
 function buildAdminEmails(): string[] {
   const external = (process.env.ADMIN_EMAIL ?? "").split(",").map(e => e.trim()).filter(Boolean);
-  const corpEnv  = (process.env.ADMIN_EMAIL_CORPORATE ?? "").split(",").map(e => e.trim()).filter(Boolean);
-  return [...new Set([...external, ...(corpEnv.length ? corpEnv : CORPORATE_ADMIN_EMAILS)])];
+  if (external.length > 0) {
+    // Explicit list set — use exactly those, nothing else
+    return [...new Set(external)];
+  }
+  // Fallback: warn loudly so it's obvious in logs
+  console.warn("[mailer] WARNING: ADMIN_EMAIL env var is not set — admin notifications will NOT be sent.");
+  return [];
 }
 const ADMIN_EMAILS: string[] = buildAdminEmails();
+if (ADMIN_EMAILS.length > 0) {
+  console.info(`[mailer] Admin notification recipients (${ADMIN_EMAILS.length}): ${ADMIN_EMAILS.join(", ")}`);
+}
 
 function fmtTime(t: string): string {
   if (!t) return t ?? "";

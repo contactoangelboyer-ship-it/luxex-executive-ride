@@ -470,7 +470,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
           mileageAmount: flatTotal != null ? 0 : price.mileage,
           surchargesAmount: flatTotal != null ? 0 : price.airportFee + price.afterHours + price.weekend + price.zoneSurcharge + price.meetGreet + price.childSeat + price.stopsFee,
           tollsAmount: flatTotal != null ? 0 : price.tolls,
-          totalAmount: flatTotal ?? (isQuote ? null : price.subtotal),
+          totalAmount: flatTotal ?? (isQuote ? null : parseFloat((price.subtotal + price.gratuity).toFixed(2))),
           distanceMiles: price.distanceMiles,
           promoCode: b.promoCode || null, promoDiscount: flatTotal != null || isQuote ? 0 : price.promoDiscount,
           isQuoteRequest: isQuote,
@@ -819,8 +819,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                       </>
                                     ) : (
                                       <>
-                                        <p className="font-black text-xl leading-none" style={{ color: active ? YELLOW : "#ffffff" }}>${p.subtotal.toFixed(0)}</p>
-                                        <p className="text-[10px] text-white/25 mt-0.5">+grat ${p.gratuity.toFixed(0)}</p>
+                                        <p className="font-black text-xl leading-none" style={{ color: active ? YELLOW : "#ffffff" }}>${(p.subtotal + p.gratuity).toFixed(0)}</p>
                                         <p className="text-[10px] text-white/20">{p.durationMin}min est.</p>
                                       </>
                                     )}
@@ -849,7 +848,7 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                         {p.childSeat > 0 && <PriceLine label="Child Seat" value={`${p.childSeat.toFixed(2)}`} />}
                                         {p.tolls > 0 && <PriceLine label="Est. tolls" value={`${p.tolls.toFixed(2)}`} />}
                                         {p.promoDiscount > 0 && <PriceLine label="Promo discount" value={`-${p.promoDiscount.toFixed(2)}`} discount />}
-                                        <PriceLine label="Total (excl. gratuity)" value={`${p.subtotal.toFixed(2)}`} highlight />
+                                        <PriceLine label="Total" value={`${(p.subtotal + p.gratuity).toFixed(2)}`} highlight />
                                       </>
                                     )}
                                   </motion.div>
@@ -972,25 +971,12 @@ export function BookingSystem({ triggerClassName, triggerText = "BOOK NOW", trig
                                         discount
                                       />
                                     )}
-                                    <PriceLine label="Subtotal" value={`${price.subtotal.toFixed(2)}`} highlight />
+                                    <PriceLine label="Total" value={`${(price.subtotal + price.gratuity).toFixed(2)}`} highlight />
                                   </>
                                 )}
                               </div>
                             )}
 
-                            {/* Gratuity selector */}
-                            <div className="mt-4 space-y-2">
-                              <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/25">Gratuity (not collected now)</p>
-                              <div className="flex gap-1.5">
-                                {([0, 15, 18, 20] as const).map(pct => (
-                                  <button key={pct} type="button" onClick={() => setGratuityPct(pct)}
-                                    className={`flex-1 py-2.5 border text-[10px] font-black tracking-widest uppercase transition-all ${gratuityPct === pct ? "border-[#C9A84C] text-[#C9A84C] bg-[#C9A84C]/10" : "border-white/[0.08] text-white/25 hover:border-white/20 hover:text-white/40"}`}>
-                                    {pct === 0 ? "None" : `${pct}%`}
-                                    {pct > 0 && price && <span className="block text-[8px] opacity-60 mt-0.5 font-semibold">${(price.subtotal * pct / 100).toFixed(0)}</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
 
                           </div>
                           <div className="flex items-start gap-3 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/15">

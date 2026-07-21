@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Loader2, ArrowLeft, Car, User, ChevronRight, KeyRound, Mail } from "lucide-react";
-import { registerUser, loginUser, loginWithPin, setCurrentUser, type UserRole } from "@/hooks/useAuth";
+import { registerUser, loginUser, loginWithPin, setCurrentUser, getCurrentUser, type UserRole } from "@/hooks/useAuth";
 
 type Mode = "select" | "login" | "register" | "pin-login";
 
@@ -12,6 +12,14 @@ const BG = "#060606";
 
 export default function Auth({ initialMode = "select" }: { initialMode?: Mode }) {
   const [, navigate] = useLocation();
+
+  // If user is already logged in, redirect to their dashboard
+  const existingUser = getCurrentUser();
+  if (existingUser) {
+    navigate(existingUser.role === "driver" ? "/driver/dashboard" : "/passenger/dashboard");
+    return null;
+  }
+
   const [mode, setMode] = useState<Mode>(initialMode);
   const [role, setRole] = useState<UserRole>("passenger");
   const [showPass, setShowPass] = useState(false);
@@ -362,9 +370,9 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
                     <DarkField label="Phone" type="tel" value={form.phone}
                       onChange={v => set("phone", v)} placeholder="+1 (555) 000-0000" />
                     <DarkPasswordField label="Password" value={form.password}
-                      onChange={v => set("password", v)} show={showPass} onToggle={() => setShowPass(!showPass)} />
+                      onChange={v => set("password", v)} show={showPass} onToggle={() => setShowPass(!showPass)} isNew />
                     <DarkPasswordField label="Confirm Password" value={form.confirmPassword}
-                      onChange={v => set("confirmPassword", v)} show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} />
+                      onChange={v => set("confirmPassword", v)} show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} isNew />
 
                     <AnimatePresence>
                       {error && <ErrorMsg msg={error} />}
@@ -449,8 +457,8 @@ function DarkField({ label, type = "text", value, onChange, placeholder }: {
   );
 }
 
-function DarkPasswordField({ label, value, onChange, show, onToggle }: {
-  label: string; value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void;
+function DarkPasswordField({ label, value, onChange, show, onToggle, isNew = false }: {
+  label: string; value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void; isNew?: boolean;
 }) {
   return (
     <div>
@@ -458,7 +466,15 @@ function DarkPasswordField({ label, value, onChange, show, onToggle }: {
         {label}
       </label>
       <div className="relative">
-        <input type={show ? "text" : "password"} value={value} onChange={e => onChange(e.target.value)} required
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          required
+          autoComplete={isNew ? "new-password" : "current-password"}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full px-4 py-3 pr-11 text-sm text-white outline-none transition-all duration-200"
           style={{
             background: "rgba(255,255,255,0.04)",

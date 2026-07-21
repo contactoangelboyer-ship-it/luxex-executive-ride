@@ -97934,13 +97934,18 @@ var resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY)
 var FROM_BOOKINGS = "LuxEx Bookings <bookings@luxexride.com>";
 var FROM_INFO = "LuxEx Executive Ride <info@luxexride.com>";
 var REPLY_TO = "contact@luxexride.com";
-var CORPORATE_ADMIN_EMAILS = ["contact@luxexride.com", "info@luxexride.com", "bookings@luxexride.com"];
 function buildAdminEmails() {
   const external = (process.env.ADMIN_EMAIL ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-  const corpEnv = (process.env.ADMIN_EMAIL_CORPORATE ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-  return [.../* @__PURE__ */ new Set([...external, ...corpEnv.length ? corpEnv : CORPORATE_ADMIN_EMAILS])];
+  if (external.length > 0) {
+    return [...new Set(external)];
+  }
+  console.warn("[mailer] WARNING: ADMIN_EMAIL env var is not set \u2014 admin notifications will NOT be sent.");
+  return [];
 }
 var ADMIN_EMAILS = buildAdminEmails();
+if (ADMIN_EMAILS.length > 0) {
+  console.info(`[mailer] Admin notification recipients (${ADMIN_EMAILS.length}): ${ADMIN_EMAILS.join(", ")}`);
+}
 function fmtTime(t) {
   if (!t) return t ?? "";
   const [h, m] = t.split(":").map(Number);

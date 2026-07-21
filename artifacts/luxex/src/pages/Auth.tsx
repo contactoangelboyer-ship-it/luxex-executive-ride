@@ -87,7 +87,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
 
         <div className="relative z-10 flex flex-col h-full px-16 py-14">
           <a href="/">
-            <img src={LOGO} alt="Luxex Executive Ride" className="h-40 w-auto object-contain" />
+            <img src={LOGO} alt="Luxury Black Car Services" className="h-40 w-auto object-contain" />
           </a>
 
           <div className="flex-1 flex flex-col justify-center">
@@ -389,7 +389,7 @@ export default function Auth({ initialMode = "select" }: { initialMode?: Mode })
         </div>
 
         <footer className="px-6 py-5 text-center">
-          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>© 2025 Luxex Executive Ride. All rights reserved.</p>
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>© 2025 Luxury Black Car Services. All rights reserved.</p>
         </footer>
       </div>
     </div>

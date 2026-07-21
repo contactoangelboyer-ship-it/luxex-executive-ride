@@ -35,7 +35,7 @@ export default function AdminLogin() {
         <a href="/">
           <img
             src="/logo.png"
-            alt="Luxex Executive Ride"
+            alt="Luxury Black Car Services"
             className="h-20 w-auto object-contain drop-shadow-[0_0_14px_rgba(242,225,71,0.3)]"
           />
         </a>

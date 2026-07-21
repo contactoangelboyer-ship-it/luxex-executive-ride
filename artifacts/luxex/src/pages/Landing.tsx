@@ -470,7 +470,7 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
     >
       <motion.img
         src="/logo.png"
-        alt="Luxex Executive Ride"
+        alt="Luxury Black Car Services"
         initial={{ opacity: 0, y: 12, scale: 0.92 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -709,7 +709,7 @@ export default function Landing() {
           <a href="#" className="flex items-center group">
             <motion.img
               src="/logo.png"
-              alt="Luxex Executive Ride"
+              alt="Luxury Black Car Services"
               whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.2 }}
               className="h-32 sm:h-40 md:h-44 w-auto object-contain drop-shadow-[0_0_22px_rgba(201,168,76,0.45)]"
@@ -1180,7 +1180,7 @@ export default function Landing() {
             <div className="max-w-[200px]">
               <img
                 src="/logo.png"
-                alt="Luxex Executive Ride"
+                alt="Luxury Black Car Services"
                 className="h-28 md:h-36 w-auto object-contain mb-4 drop-shadow-[0_0_18px_rgba(201,168,76,0.35)]"
               />
               <p className="text-sm text-white/80 font-light leading-relaxed">
@@ -1224,7 +1224,7 @@ export default function Landing() {
           </div>
 
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-xs text-white/65">&copy; {new Date().getFullYear()} Luxex Executive Ride. All rights reserved.</p>
+            <p className="text-xs text-white/65">&copy; {new Date().getFullYear()} Luxury Black Car Services. All rights reserved.</p>
             <div className="flex items-center gap-6">
               {/* Social links */}
               <div className="flex items-center gap-3">

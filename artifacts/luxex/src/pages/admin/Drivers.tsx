@@ -156,7 +156,7 @@ import { useEffect, useRef, useState } from "react";
     };
 
     const buildShareMessage = (driver: any): string => {
-      return `Hola ${driver.name},\n\nAquí están tus datos de acceso a *Luxex Executive Ride*:\n\n🔑 PIN de acceso: *${driver.accessPin}*\n\nPara ingresar:\n1. Ve a https://luxexride.com/login\n2. Elige "Driver — Login with PIN"\n3. Ingresa tu PIN\n\nSi tienes dudas, contacta al administrador.`;
+      return `Hola ${driver.name},\n\nAquí están tus datos de acceso a *Luxury Black Car Services*:\n\n🔑 PIN de acceso: *${driver.accessPin}*\n\nPara ingresar:\n1. Ve a https://luxexride.com/login\n2. Elige "Driver — Login with PIN"\n3. Ingresa tu PIN\n\nSi tienes dudas, contacta al administrador.`;
     };
 
     const copyShareMessage = async () => {
@@ -174,7 +174,7 @@ import { useEffect, useRef, useState } from "react";
 
     const shareViaEmail = () => {
       if (!pinDriver?.accessPin) return;
-      const subject = encodeURIComponent("Tus datos de acceso — Luxex Executive Ride");
+      const subject = encodeURIComponent("Tus datos de acceso — Luxury Black Car Services");
       const body = encodeURIComponent(buildShareMessage(pinDriver).replace(/\*/g, ""));
       window.open(`mailto:${pinDriver.email ?? ""}?subject=${subject}&body=${body}`, "_blank");
     };

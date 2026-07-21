@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ClipboardList, UserCog, Car, DollarSign,
-  MapPin, Tag, LogOut, Menu, X, ChevronRight, BarChart3
+  MapPin, Tag, LogOut, Menu, X, ChevronRight, BarChart3, Users2
 } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 
@@ -12,6 +12,7 @@ const YELLOW = "#C9A84C";
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard",   icon: LayoutDashboard },
   { href: "/admin/bookings",  label: "Bookings",     icon: ClipboardList   },
+  { href: "/admin/clients",   label: "Clients",      icon: Users2          },
   { href: "/admin/drivers",   label: "Drivers",      icon: UserCog         },
   { href: "/admin/vehicles",  label: "Vehicles",     icon: Car             },
   { href: "/admin/pricing",   label: "Pricing",      icon: DollarSign      },

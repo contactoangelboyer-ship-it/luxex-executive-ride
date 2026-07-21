@@ -12,6 +12,7 @@ import Auth from "@/pages/Auth";
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminBookings from "@/pages/admin/Bookings";
+import AdminClients from "@/pages/admin/Clients";
 import AdminDrivers from "@/pages/admin/Drivers";
 import AdminVehicles from "@/pages/admin/Vehicles";
 import AdminPricing from "@/pages/admin/Pricing";
@@ -87,6 +88,7 @@ function Router() {
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/dashboard"><AdminGuard component={AdminDashboard} /></Route>
           <Route path="/admin/bookings"><AdminGuard component={AdminBookings} /></Route>
+          <Route path="/admin/clients"><AdminGuard component={AdminClients} /></Route>
           <Route path="/admin/drivers"><AdminGuard component={AdminDrivers} /></Route>
           <Route path="/admin/vehicles"><AdminGuard component={AdminVehicles} /></Route>
           <Route path="/admin/pricing"><AdminGuard component={AdminPricing} /></Route>

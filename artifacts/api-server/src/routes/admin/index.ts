@@ -579,6 +579,49 @@ router.post("/bookings/:id/resend-confirmation", async (req, res) => {
   }
 });
 
+// ── Clients (aggregated from bookings by email) ─────────────────────────────
+
+router.get("/clients", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await db
+      .select({
+        email:             bookings.passengerEmail,
+        name:              sql<string>`max(${bookings.passengerName})`,
+        phone:             sql<string>`max(${bookings.passengerPhone})`,
+        totalBookings:     sql<number>`count(*)::int`,
+        completedBookings: sql<number>`count(*) filter (where ${bookings.status} = 'completed')::int`,
+        cancelledBookings: sql<number>`count(*) filter (where ${bookings.status} = 'cancelled')::int`,
+        totalSpent:        sql<number>`coalesce(sum(${bookings.totalAmount}) filter (where ${bookings.status} != 'cancelled'), 0)`,
+        firstBookingDate:  sql<string>`min(${bookings.date})`,
+        lastBookingDate:   sql<string>`max(${bookings.date})`,
+        lastCode:          sql<string>`max(${bookings.confirmationCode})`,
+      })
+      .from(bookings)
+      .groupBy(bookings.passengerEmail)
+      .orderBy(sql`max(${bookings.date}) desc`);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load clients" });
+  }
+});
+
+router.get("/clients/:email/bookings", requireAdmin, async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const rows = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.passengerEmail, email))
+      .orderBy(desc(bookings.date));
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load client bookings" });
+  }
+});
+
 router.post("/test-email", async (_req, res) => {
   try {
     const mockBooking = {

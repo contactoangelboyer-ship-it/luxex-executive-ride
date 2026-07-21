@@ -91,6 +91,11 @@ const BASE = "/api/admin";
       delete: (id: number) => req<any>("DELETE", `/promotions/${id}`),
     },
 
+    clients: {
+      list: () => req<any[]>("GET", "/clients"),
+      bookings: (email: string) => req<any[]>("GET", `/clients/${encodeURIComponent(email)}/bookings`),
+    },
+
     dnsHealth: () => req<any>("GET", "/dns-health"),
   };
   

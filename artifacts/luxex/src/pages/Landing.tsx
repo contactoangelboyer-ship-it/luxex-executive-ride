@@ -503,6 +503,9 @@ const FAQS = [
   { q: "What areas do you serve?", a: "We operate throughout New Jersey, New York, Connecticut, and Pennsylvania. We cover all major airports (JFK, EWR, LGA, PHL) and corporate hubs in Manhattan, Hoboken, Stamford, Greenwich, Philadelphia, and more." },
   { q: "Can I request a specific vehicle?", a: "Yes. Choose from our Executive Sedan (Mercedes S-Class / BMW 7 Series), Luxury SUV (Cadillac Escalade / Lincoln Navigator), or Premium Van (Mercedes Sprinter Executive). Your vehicle is confirmed at booking." },
   { q: "Do you offer corporate accounts?", a: "Yes. We work with companies to set up managed corporate accounts with consolidated monthly invoicing, ride reporting, and priority dispatch. Contact us at info@luxexride.com to get started." },
+  { q: "Do you provide black car service from New Jersey to New York City?", a: "Absolutely — NJ to NYC is one of our most-requested routes. We serve all of New Jersey (Newark, Hoboken, Jersey City, Morristown, Princeton, Short Hills, Summit, Edison, Parsippany) to any destination in Manhattan, Brooklyn, Queens, the Bronx, and Long Island. Fixed rates, tolls included, zero surge pricing." },
+  { q: "Which airports does LuxexRide service?", a: "We provide black car service to and from all major airports in the Northeast: JFK International Airport, Newark Liberty International (EWR), LaGuardia Airport (LGA), Philadelphia International (PHL), Teterboro Airport (TEB, NJ), Westchester County Airport (HPN, NY), and Stewart International Airport (SWF). Flight tracking included at no charge." },
+  { q: "What is the difference between a black car service and a limo service?", a: "Black car services like LuxexRide use late-model luxury vehicles — Mercedes-Benz S580, BMW 7 Series, Cadillac Escalade, Lincoln Navigator, Mercedes Sprinter — with professionally-licensed chauffeurs. Unlike traditional limousine services, we specialize in executive and corporate transportation with modern vehicles, real-time flight tracking, and fully transparent fixed pricing. No meter running, no surprises." },
 ];
 
 function FAQSection() {
@@ -577,20 +580,23 @@ function FAQSection() {
 
 function ServiceAreasSection() {
   const areas = [
-    { state: "New Jersey", cities: "Newark · Hoboken · Jersey City · Princeton · Short Hills · Morristown", abbr: "NJ" },
-    { state: "New York", cities: "Manhattan · Brooklyn · Queens · Westchester · Long Island · Buffalo", abbr: "NY" },
-    { state: "Connecticut", cities: "Stamford · Greenwich · Hartford · New Haven · Fairfield · Bridgeport", abbr: "CT" },
-    { state: "Pennsylvania", cities: "Philadelphia · Pittsburgh · Allentown · King of Prussia · Wayne", abbr: "PA" },
+    { state: "New Jersey", cities: "Newark · Jersey City · Hoboken · Princeton · Short Hills · Morristown · Summit · Edison · Parsippany · Red Bank · Teaneck · Hackensack · Montclair · Livingston", abbr: "NJ" },
+    { state: "New York", cities: "Manhattan · Brooklyn · Queens · Bronx · Westchester · Long Island · White Plains · Yonkers · Flushing · Harlem · Midtown · Financial District · JFK · LaGuardia", abbr: "NY" },
+    { state: "Connecticut", cities: "Greenwich · Stamford · Darien · New Canaan · Westport · Fairfield · Bridgeport · Hartford · New Haven · Norwalk · Wilton · Ridgefield", abbr: "CT" },
+    { state: "Pennsylvania", cities: "Philadelphia · King of Prussia · Wayne · Malvern · Radnor · Allentown · Bethlehem · Wilmington · Pittsburgh · Conshohocken", abbr: "PA" },
   ];
 
   return (
     <section className="bg-[#060606] py-20 px-6 lg:px-20 border-t border-white/[0.04]">
       <div className="max-w-[1280px] mx-auto">
-        <Reveal className="mb-12">
+        <Reveal className="mb-10">
           <p className="text-[11px] font-bold tracking-[0.25em] uppercase mb-4" style={{ color: YELLOW }}>Coverage</p>
-          <h2 className="font-black uppercase leading-[0.92] tracking-tight" style={{ fontSize: "clamp(2rem,4vw,3.5rem)" }}>
+          <h2 className="font-black uppercase leading-[0.92] tracking-tight mb-6" style={{ fontSize: "clamp(2rem,4vw,3.5rem)" }}>
             Where we operate.
           </h2>
+          <p className="text-sm text-white/40 font-light leading-relaxed max-w-[780px]">
+            LuxexRide provides premium <span className="text-white/60">black car service</span>, executive chauffeur, and private car service across the entire Northeast tristate area. Whether you need a black car from Newark to JFK, corporate transportation in Midtown Manhattan, a private chauffeur in Greenwich CT, or an executive sedan to Philadelphia PA — our professional drivers are on call 24/7 with fixed pricing and zero surge charges. All major airports covered: JFK · EWR · LGA · PHL · TEB · HPN.
+          </p>
         </Reveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.04]">
@@ -815,7 +821,7 @@ export default function Landing() {
 
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
               className="text-[11px] font-bold tracking-[0.25em] uppercase text-white/65 mb-5">
-              Premium Chauffeur Service
+              Black Car &amp; Chauffeur Service · NJ · NY · CT · PA
             </motion.p>
 
             <div className="overflow-hidden mb-2">
@@ -834,7 +840,7 @@ export default function Landing() {
 
             <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.78, duration: 0.6 }}
               className="text-white/65 text-[15px] font-light leading-relaxed mb-9 max-w-[340px]">
-              Executive ground transportation for those who set the standard.
+              Premium black car service in New Jersey, New York, Connecticut &amp; Pennsylvania. Airport transfers, corporate travel &amp; private chauffeur — fixed pricing, 24/7.
             </motion.p>
 
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.88, duration: 0.6 }}

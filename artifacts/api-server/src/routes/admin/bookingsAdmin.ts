@@ -6,6 +6,7 @@ import { requireAdmin } from "../../middlewares/adminAuth";
 import {
   sendDriverAssignment,
   sendStatusUpdate,
+  sendAdminStatusUpdate,
   sendCustomerConfirmation,
   sendAdminNotification,
   sendPostTripSummary,
@@ -133,10 +134,17 @@ router.patch("/bookings/:id", requireAdmin, async (req, res) => {
       }
     }
     if (statusChanged) {
+      // Passenger email
       patchEmailTasks.push(
         status === "completed"
-          ? sendPostTripSummary(updated).catch(() => {})
-          : sendStatusUpdate(updated, status, assignedDriver ?? undefined).catch(() => {}),
+          ? sendPostTripSummary(updated).catch((err) => logger.error({ err }, "[mailer] post-trip summary failed"))
+          : sendStatusUpdate(updated, status, assignedDriver ?? undefined).catch((err) => logger.error({ err }, "[mailer] passenger status email failed")),
+      );
+      // Admin email — was missing, now fixed
+      patchEmailTasks.push(
+        sendAdminStatusUpdate(updated, status, assignedDriver ?? undefined).catch((err) =>
+          logger.error({ err }, "[mailer] admin status email failed"),
+        ),
       );
     }
     await Promise.allSettled(patchEmailTasks);

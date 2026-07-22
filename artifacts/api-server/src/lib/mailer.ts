@@ -354,6 +354,10 @@ export async function sendAdminNotification(booking: any): Promise<void> {
     logger.warn("[mailer] RESEND_API_KEY not configured — skipping admin email");
     return;
   }
+  if (ADMIN_EMAILS.length === 0) {
+    logger.warn("[mailer] ADMIN_EMAIL env var is not set — skipping admin notification. Set ADMIN_EMAIL in your environment variables.");
+    return;
+  }
 
   const html = baseTemplate(`
     <div class="body">
@@ -564,6 +568,10 @@ export async function sendAdminStatusUpdate(
   driver?: { name: string; phone?: string | null } | null,
 ): Promise<void> {
   if (!resend) return;
+  if (ADMIN_EMAILS.length === 0) {
+    logger.warn("[mailer] ADMIN_EMAIL env var is not set — skipping admin status update. Set ADMIN_EMAIL in your environment variables.");
+    return;
+  }
 
   const info = STATUS_EMAIL_MAP[newStatus];
   if (!info) return;
